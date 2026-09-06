@@ -757,6 +757,50 @@
       "Physics brawler",
       "Local multiplayer"
     ]
+  },
+  {
+    "slug": "americangirldollrace",
+    "url": "https://hoai.net/games/americangirldollrace/",
+    "title": "American Girl Doll Race",
+    "description": "A bright side-scrolling race across fantasy tracks with dolls, hurdles, and horses. Made for Charlie.",
+    "thumbnail": "assets/american-girl-doll-race-gameplay.png",
+    "tags": [
+      "Racing",
+      "Family"
+    ]
+  },
+  {
+    "slug": "messenger/dolls",
+    "url": "https://hoai.net/games/messenger/dolls/",
+    "title": "Doll Puppets",
+    "description": "A puppet stage for animated dolls with expressive poses, talking controls, and whimsical backdrops.",
+    "thumbnail": "assets/doll-puppets-gameplay.png",
+    "tags": [
+      "Puppets",
+      "Dolls"
+    ]
+  },
+  {
+    "slug": "charlieparty",
+    "url": "https://hoai.net/games/charlieparty/",
+    "title": "Charlie Party",
+    "description": "A cheerful character-party brawler with multiple arenas, character picks, and mini-game energy. Based on drawings by Charlie.",
+    "thumbnail": "assets/charlie-party-gameplay.png",
+    "tags": [
+      "Party",
+      "Brawler"
+    ]
+  },
+  {
+    "slug": "tankwars",
+    "url": "https://hoai.net/games/tankwars/",
+    "title": "Tank Wars",
+    "description": "A top-down tank battle game with local and online multiplayer.",
+    "thumbnail": "assets/tank-wars-gameplay.png",
+    "tags": [
+      "Shooter",
+      "Online"
+    ]
   }
 ];
 
@@ -794,8 +838,8 @@
           const nativeScreens = new Set(["mechmayhem", "mando", "cambrian", "mini/hopper", "battlebotarena", "jjkbrawler", "rounders", "tennis", "jujutsubattlegrounds"]);
           const native = nativeScreens.has(game.slug);
           const cropPath = (variant) => native
-            ? `${stem}-${variant}.webp`
-            : `${stem}-${variant}.webp`;
+            ? `thumbnails/${stem}-${variant}.webp`
+            : `thumbnails/${stem}-${variant}.webp`;
           // Match the CSS card layouts, including the stacked tiny-screen card.
           [
             ["(max-width: 340px)", "wide"],
