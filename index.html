@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Games by Hoai Nguyen</title>
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <link rel="apple-touch-icon" href="./favicon.png">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #08090d;
+        --panel: rgba(18, 22, 33, 0.78);
+        --panel-strong: rgba(28, 35, 53, 0.9);
+        --text: #f7f8ff;
+        --muted: #aeb7cc;
+        --line: rgba(255, 255, 255, 0.12);
+        --cyan: #39d5ff;
+        --lime: #b8ff4f;
+        --pink: #ff4ca8;
+        --gold: #ffd76a;
+        --radius: 8px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 16% 10%, rgba(57, 213, 255, 0.18), transparent 28rem),
+          radial-gradient(circle at 88% 18%, rgba(255, 76, 168, 0.18), transparent 30rem),
+          linear-gradient(145deg, #08090d 0%, #111522 48%, #090b11 100%);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 34px 0 54px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 34px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        text-decoration: none;
+      }
+
+      .mark {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: var(--radius);
+        background: linear-gradient(135deg, rgba(57, 213, 255, 0.24), rgba(255, 76, 168, 0.18));
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.32);
+        font-weight: 900;
+      }
+
+      .mark img {
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        object-fit: cover;
+      }
+
+      .brand span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .brand strong {
+        display: block;
+        margin-top: 2px;
+        font-size: 1.08rem;
+      }
+
+      .library-count {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 9px 13px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+        gap: 26px;
+        align-items: end;
+        margin-bottom: 24px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--lime);
+        font-size: 0.82rem;
+        font-weight: 900;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: currentColor;
+        box-shadow: 0 0 20px currentColor;
+      }
+
+      h1 {
+        max-width: none;
+        margin: 10px 0 12px;
+        font-size: clamp(2.25rem, 4.75vw, 4rem);
+        line-height: 1;
+        letter-spacing: 0;
+        white-space: nowrap;
+      }
+
+      .intro {
+        max-width: 660px;
+        margin: 0;
+        color: var(--muted);
+        font-size: clamp(1rem, 1.6vw, 1.18rem);
+        line-height: 1.6;
+      }
+
+      .status-panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        padding: 18px;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+      }
+
+      .status-panel strong {
+        display: block;
+        font-size: 0.95rem;
+      }
+
+      .status-panel p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 18px;
+      }
+
+      .game-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
+        min-height: 356px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel-strong);
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.26);
+        isolation: isolate;
+        text-decoration: none;
+        transform: translateY(0);
+        transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+      }
+
+      .game-card:hover,
+      .game-card:focus-visible,
+      .game-card.gamepad-selected {
+        border-color: rgba(57, 213, 255, 0.72);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(57, 213, 255, 0.24);
+        outline: none;
+        transform: translateY(-4px);
+      }
+
+      .game-card.gamepad-selected {
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42), 0 0 0 3px rgba(184, 255, 79, 0.72);
+      }
+
+      .controller-status {
+        color: var(--lime) !important;
+        font-weight: 800;
+      }
+
+      .thumb {
+        position: relative;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        background:
+          linear-gradient(135deg, rgba(57, 213, 255, 0.26), rgba(255, 76, 168, 0.2)),
+          #151b29;
+      }
+
+      .thumb picture {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+        min-height: 0;
+      }
+
+      .thumb img {
+        display: block;
+        min-width: 0;
+        max-width: 100%;
+        max-height: none;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center center;
+        filter: saturate(1.08) contrast(1.04);
+      }
+
+      .thumb::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(8, 9, 13, 0.52), transparent 58%);
+        pointer-events: none;
+      }
+
+      .generated-thumb {
+        display: grid;
+        place-items: center;
+        height: 190px;
+        aspect-ratio: 16 / 9;
+      }
+
+      .generated-thumb::before {
+        content: attr(data-initial);
+        position: absolute;
+        color: rgba(255, 255, 255, 0.88);
+        font-size: 5.5rem;
+        font-weight: 950;
+        text-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+        z-index: 1;
+      }
+
+      .generated-thumb.rounder {
+        background:
+          conic-gradient(from 60deg at 50% 50%, #39d5ff, #b8ff4f, #ffd76a, #ff4ca8, #39d5ff);
+      }
+
+      .generated-thumb.tankwars {
+        background:
+          linear-gradient(135deg, rgba(184, 255, 79, 0.22), transparent),
+          repeating-linear-gradient(45deg, #172416 0 14px, #101911 14px 28px);
+      }
+
+      .card-body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 999px;
+        padding: 6px 9px;
+        background: rgba(255, 255, 255, 0.07);
+        color: #dbe2f4;
+        font-size: 0.76rem;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .card-title {
+        margin: 0;
+        font-size: 1.42rem;
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+
+      .description {
+        margin: 0;
+        min-height: 3.15em;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .play-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-top: auto;
+        padding-top: 2px;
+        color: var(--cyan);
+        font-weight: 900;
+      }
+
+      .arrow {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 999px;
+        background: rgba(57, 213, 255, 0.13);
+        font-size: 1.35rem;
+      }
+
+      .empty {
+        display: none;
+        border: 1px dashed var(--line);
+        border-radius: var(--radius);
+        padding: 28px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .empty.is-visible {
+        display: block;
+      }
+
+      @media (max-width: 780px) {
+        body {
+          background:
+            radial-gradient(circle at 10% 4%, rgba(57, 213, 255, 0.2), transparent 17rem),
+            radial-gradient(circle at 100% 0%, rgba(255, 76, 168, 0.16), transparent 17rem),
+            linear-gradient(160deg, #08090d 0%, #111522 52%, #090b11 100%);
+        }
+
+        .page {
+          width: min(100% - 20px, 1180px);
+          padding: max(16px, env(safe-area-inset-top)) 0 max(34px, env(safe-area-inset-bottom));
+        }
+
+        .topbar {
+          align-items: flex-start;
+          gap: 12px;
+          margin-bottom: 22px;
+        }
+
+        .brand {
+          min-width: 0;
+          gap: 10px;
+        }
+
+        .mark {
+          width: 38px;
+          height: 38px;
+          flex: 0 0 auto;
+          font-size: 0.82rem;
+        }
+
+        .brand span {
+          font-size: 0.68rem;
+          letter-spacing: 0.11em;
+        }
+
+        .brand strong {
+          max-width: 190px;
+          font-size: 0.92rem;
+          line-height: 1.18;
+        }
+
+        .library-count {
+          flex: 0 0 auto;
+          padding: 8px 10px;
+          font-size: 0.74rem;
+          line-height: 1.1;
+          text-align: center;
+        }
+
+        .hero {
+          grid-template-columns: 1fr;
+          gap: 14px;
+          margin-bottom: 16px;
+          padding-bottom: 18px;
+        }
+
+        .eyebrow {
+          font-size: 0.7rem;
+          letter-spacing: 0.15em;
+        }
+
+        h1 {
+          max-width: 100%;
+          margin: 9px 0 9px;
+          font-size: clamp(1.58rem, 7.8vw, 3rem);
+          line-height: 1.04;
+        }
+
+        .intro {
+          max-width: 35rem;
+          font-size: 0.98rem;
+          line-height: 1.48;
+        }
+
+        .status-panel {
+          padding: 14px;
+          box-shadow: 0 14px 44px rgba(0, 0, 0, 0.26);
+        }
+
+        .status-panel p {
+          font-size: 0.86rem;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .game-card {
+          display: grid;
+          grid-template-columns: minmax(124px, 42%) minmax(0, 1fr);
+          min-height: 156px;
+          border-color: rgba(255, 255, 255, 0.14);
+        }
+
+        .game-card:hover,
+        .game-card:focus-visible,
+        .game-card.gamepad-selected {
+          transform: translateY(-2px);
+        }
+
+        .thumb {
+          align-self: center;
+          height: auto;
+          min-height: 0;
+          aspect-ratio: 1 / 1;
+        }
+
+        .generated-thumb {
+          align-self: stretch;
+          height: 100%;
+          min-height: 156px;
+        }
+
+        .card-body {
+          min-width: 0;
+          gap: 9px;
+          padding: 12px;
+        }
+
+        .meta-row {
+          gap: 6px;
+        }
+
+        .pill {
+          max-width: 100%;
+          padding: 5px 7px;
+          overflow: hidden;
+          font-size: 0.66rem;
+          line-height: 1;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .card-title {
+          font-size: 1.08rem;
+          line-height: 1.12;
+        }
+
+        .description {
+          display: -webkit-box;
+          min-height: 0;
+          overflow: hidden;
+          font-size: 0.84rem;
+          line-height: 1.35;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+        }
+
+        .play-row {
+          gap: 8px;
+          font-size: 0.84rem;
+        }
+
+        .arrow {
+          width: 28px;
+          height: 28px;
+          font-size: 1.1rem;
+        }
+      }
+
+      @media (max-width: 430px) {
+        .thumb {
+          aspect-ratio: 3 / 4;
+        }
+
+        .topbar {
+          align-items: center;
+        }
+
+        .brand strong {
+          max-width: 150px;
+        }
+
+        .library-count {
+          max-width: 74px;
+        }
+
+        .game-card {
+          grid-template-columns: minmax(116px, 40%) minmax(0, 1fr);
+          min-height: 146px;
+        }
+
+        .generated-thumb {
+          min-height: 146px;
+        }
+
+        .card-body {
+          padding: 10px;
+        }
+
+        .card-title {
+          font-size: 1rem;
+        }
+
+        .description {
+          font-size: 0.8rem;
+          -webkit-line-clamp: 2;
+        }
+      }
+
+      @media (max-width: 340px) {
+        .topbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .library-count {
+          max-width: none;
+          width: max-content;
+        }
+
+        .game-card {
+          grid-template-columns: 1fr;
+        }
+
+        .thumb {
+          height: auto;
+          min-height: 0;
+          aspect-ratio: 16 / 9;
+        }
+
+        .generated-thumb {
+          height: auto;
+          aspect-ratio: 16 / 9;
+        }
+      }
+
+      @media (max-width: 300px) {
+        h1 {
+          white-space: normal;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <a class="brand" href="../" aria-label="Hoai Nguyen home">
+          <span class="mark" aria-hidden="true">
+            <img src="./favicon.png" alt="">
+          </span>
+          <span>
+            Arcade Library
+            <strong>Games by Hoai Nguyen</strong>
+          </span>
+        </a>
+        <div class="library-count" id="libraryCount">Finding games...</div>
+      </header>
+
+      <section class="hero" aria-labelledby="pageTitle">
+        <div>
+          <span class="eyebrow">Playable collection</span>
+          <h1 id="pageTitle">Games by Hoai Nguyen</h1>
+          <p class="intro">A compact arcade shelf of browser games, party brawlers, physics experiments, racing prototypes, and couch multiplayer chaos.</p>
+        </div>
+        <aside class="status-panel">
+          <strong>Launch straight into a game.</strong>
+          <p>A hand-picked shelf of browser games, each linked directly to its playable page.</p>
+          <p class="controller-status" id="controllerStatus" role="status">Controllers share one selection: direction/A/Start selects; A/Start/X/RT plays; B deselects.</p>
+        </aside>
+      </section>
+
+      <section class="grid" id="gameGrid" aria-live="polite"></section>
+      <p class="empty" id="emptyState">No playable game folders were found.</p>
+    </main>
+
+    <template id="gameCardTemplate">
+      <a class="game-card">
+        <div class="thumb"></div>
+        <div class="card-body">
+          <div class="meta-row"></div>
+          <h2 class="card-title"></h2>
+          <p class="description"></p>
+          <div class="play-row">
+            <span>Play now</span>
+            <span class="arrow" aria-hidden="true">›</span>
+          </div>
+        </div>
+      </a>
+    </template>
+
+    <script>
+      const GAMES = [
+  {
+    "slug": "mechmayhem",
+    "url": "/mechmayhem/",
+    "title": "Mech Mayhem",
+    "description": "A 3D mech battle arena with a sordid cast of robots in destructible cities, with local multiplayer, and lots of ultimates.",
+    "thumbnail": "assets/mech-mayhem-gameplay.png",
+    "tags": [
+      "3D",
+      "Mech combat"
+    ]
+  },
+  {
+    "slug": "mando",
+    "url": "/mando/",
+    "title": "Bounty Hunters",
+    "description": "A Bounty Hunter battle and exploration game with missions, wave battles, and PvP.",
+    "thumbnail": "assets/bounty-hunters-logo-gameplay.png",
+    "tags": [
+      "3D action",
+      "PvP"
+    ]
+  },
+  {
+    "slug": "cambrian",
+    "url": "/cambrian/",
+    "title": "Cambrian Explosion",
+    "description": "Eat, grow, fight, and flee in a hungry prehistoric sea set 508 million years ago.",
+    "thumbnail": "assets/cambrian-explosion.png",
+    "tags": [
+      "Survival",
+      "Prehistoric"
+    ]
+  },
+  {
+    "slug": "mini/hopper",
+    "url": "/mini/hopper/",
+    "title": "Hopper the Grasshopper",
+    "description": "Pilot a giant mecha grasshopper through a three-episode anime adventure, jumping, kicking, and shooting eye lasers on your way to victory.",
+    "thumbnail": "assets/hopper-the-grasshopper.png",
+    "tags": [
+      "Mecha",
+      "Adventure"
+    ]
+  },
+  {
+    "slug": "battlebotarena",
+    "url": "/battlebotarena/",
+    "title": "Battle Bot Arena",
+    "description": "A robot combat league duel with three-minute matches, two machines, weapon controls, and one bot left standing.",
+    "thumbnail": "assets/battle-bot-arena-gameplay.png",
+    "tags": [
+      "3D",
+      "Robot combat"
+    ]
+  },
+  {
+    "slug": "jjkbrawler",
+    "url": "/jjkbrawler/",
+    "title": "JJK Brawler",
+    "description": "A cursed-energy platform fighter for one to four players, with two dozen fighters, ultimates, Domain Expansions, and twenty arenas.",
+    "thumbnail": "assets/jjk-brawler-gameplay.jpg",
+    "tags": [
+      "Fighter",
+      "1–4 players"
+    ]
+  },
+  {
+    "slug": "rounders",
+    "url": "/rounders/",
+    "title": "Rounders",
+    "description": "A one-to-four-player arena brawler with round shooters, power cards, and arenas with attitude.",
+    "thumbnail": "assets/rounders-gameplay.jpg",
+    "tags": [
+      "Arena brawler",
+      "1–4 players"
+    ]
+  },
+  {
+    "slug": "tennis",
+    "url": "/tennis/",
+    "title": "Cursed Tennis",
+    "description": "A colorful JJK × Mandalorian tennis showdown with supernatural serves and stadium-sized arcade spectacle.",
+    "thumbnail": "assets/cursed-tennis-gameplay.jpg",
+    "tags": [
+      "Sports",
+      "Arcade"
+    ]
+  },
+  {
+    "slug": "jujutsubattlegrounds",
+    "url": "/jujutsubattlegrounds/",
+    "title": "Jujutsu Battlegrounds",
+    "description": "A procedural 3D arena fighter with a large roster of sorcerers and curses, CPU battles, local multiplayer, and online hosting.",
+    "thumbnail": "assets/jujutsu-battlegrounds-gameplay.jpg",
+    "tags": [
+      "3D fighter",
+      "Online"
+    ]
+  },
+  {
+    "slug": "supergoatman",
+    "url": "/supergoatman/",
+    "title": "Super Goat Man",
+    "description": "A floppy physics brawler where up to four goats grab, kick, and headbutt through wildly themed arenas.",
+    "thumbnail": "assets/super-goat-man-gameplay.png",
+    "tags": [
+      "Physics brawler",
+      "Local multiplayer"
+    ]
+  }
+];
+
+      const grid = document.querySelector("#gameGrid");
+      const count = document.querySelector("#libraryCount");
+      const empty = document.querySelector("#emptyState");
+      const template = document.querySelector("#gameCardTemplate");
+      const controllerStatus = document.querySelector("#controllerStatus");
+
+      const GAMEPAD_DEADZONE = 0.55;
+      const GAMEPAD_REPEAT_DELAY = 360;
+      const GAMEPAD_REPEAT_RATE = 140;
+      let selectedCardIndex = -1;
+      let selectionSource = null;
+      let launchInProgress = false;
+      let activeDirection = "";
+      let nextMoveAt = 0;
+      let confirmWasPressed = false;
+      let resumeWasPressed = false;
+      const connectedGamepadIndices = new Set();
+
+      function renderCard(game) {
+        const card = template.content.firstElementChild.cloneNode(true);
+        const thumb = card.querySelector(".thumb");
+        const tags = card.querySelector(".meta-row");
+
+        card.href = game.url || `${game.slug}/`;
+        card.setAttribute("aria-label", `Play ${game.title}`);
+        card.querySelector(".card-title").textContent = game.title;
+        card.querySelector(".description").textContent = game.description;
+
+        if (game.thumbnail) {
+          const picture = document.createElement("picture");
+          const stem = game.thumbnail.split("/").pop().replace(/\.[^.]+$/, "");
+          const nativeScreens = new Set(["mechmayhem", "mando", "cambrian", "mini/hopper", "battlebotarena", "jjkbrawler", "rounders", "tennis", "jujutsubattlegrounds"]);
+          const native = nativeScreens.has(game.slug);
+          const cropPath = (variant) => native
+            ? `${stem}-${variant}.webp`
+            : `${stem}-${variant}.webp`;
+          // Match the CSS card layouts, including the stacked tiny-screen card.
+          [
+            ["(max-width: 340px)", "wide"],
+            ["(max-width: 430px)", "portrait"],
+            ["(max-width: 780px)", "square"]
+          ].forEach(([media, variant]) => {
+            const source = document.createElement("source");
+            source.media = media;
+            source.type = "image/webp";
+            source.srcset = cropPath(variant);
+            picture.append(source);
+          });
+          const image = document.createElement("img");
+          image.src = cropPath("wide");
+          image.width = 960;
+          image.height = 540;
+          image.alt = "";
+          image.loading = "lazy";
+          image.decoding = "async";
+          picture.append(image);
+          thumb.append(picture);
+        } else {
+          thumb.classList.add("generated-thumb", game.slug.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+          thumb.dataset.initial = game.title.charAt(0);
+        }
+
+        (game.tags || ["Game"]).slice(0, 3).forEach((tag) => {
+          const pill = document.createElement("span");
+          pill.className = "pill";
+          pill.textContent = tag;
+          tags.append(pill);
+        });
+
+        return card;
+      }
+
+      function getCards() {
+        return [...grid.querySelectorAll(".game-card")];
+      }
+
+      function selectCard(index, { focus = true, source = "navigation" } = {}) {
+        const cards = getCards();
+        if (!cards.length) return;
+
+        selectedCardIndex = Math.max(0, Math.min(index, cards.length - 1));
+        cards.forEach((card, cardIndex) => {
+          card.classList.toggle("gamepad-selected", cardIndex === selectedCardIndex);
+        });
+
+        const selectedCard = cards[selectedCardIndex];
+        if (focus) {
+          selectedCard.focus({ preventScroll: true });
+          selectedCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+        }
+        selectionSource = source;
+      }
+
+      function findCardInDirection(direction) {
+        const cards = getCards();
+        if (!cards.length) return -1;
+        if (selectedCardIndex < 0) return 0;
+
+        const currentRect = cards[selectedCardIndex].getBoundingClientRect();
+        const currentX = currentRect.left + currentRect.width / 2;
+        const currentY = currentRect.top + currentRect.height / 2;
+        let bestIndex = selectedCardIndex;
+        let bestScore = Infinity;
+
+        cards.forEach((card, index) => {
+          if (index === selectedCardIndex) return;
+          const rect = card.getBoundingClientRect();
+          const deltaX = rect.left + rect.width / 2 - currentX;
+          const deltaY = rect.top + rect.height / 2 - currentY;
+          const isCandidate =
+            (direction === "left" && deltaX < -1) ||
+            (direction === "right" && deltaX > 1) ||
+            (direction === "up" && deltaY < -1) ||
+            (direction === "down" && deltaY > 1);
+
+          if (!isCandidate) return;
+          const primaryDistance = direction === "left" || direction === "right" ? Math.abs(deltaX) : Math.abs(deltaY);
+          const crossDistance = direction === "left" || direction === "right" ? Math.abs(deltaY) : Math.abs(deltaX);
+          const score = primaryDistance + crossDistance * 2.5;
+          if (score < bestScore) {
+            bestScore = score;
+            bestIndex = index;
+          }
+        });
+
+        return bestIndex;
+      }
+
+      function deselectCard() {
+        getCards().forEach((card) => card.classList.remove("gamepad-selected"));
+        if (document.activeElement?.matches(".game-card")) document.activeElement.blur();
+        selectionSource = null;
+      }
+
+      function launchGame(event) {
+        // Preserve modified clicks (for example, opening a new tab).
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        if (launchInProgress) return;
+        launchInProgress = true;
+        const url = event.currentTarget.href;
+        window.location.assign(url);
+      }
+
+      function moveSelection(direction) {
+        selectCard(findCardInDirection(direction));
+      }
+
+      function readDirection(gamepad) {
+        if (gamepad.buttons[14]?.pressed || gamepad.axes[0] < -GAMEPAD_DEADZONE) return "left";
+        if (gamepad.buttons[15]?.pressed || gamepad.axes[0] > GAMEPAD_DEADZONE) return "right";
+        if (gamepad.buttons[12]?.pressed || gamepad.axes[1] < -GAMEPAD_DEADZONE) return "up";
+        if (gamepad.buttons[13]?.pressed || gamepad.axes[1] > GAMEPAD_DEADZONE) return "down";
+        return "";
+      }
+
+      function pollGamepads(timestamp) {
+        const gamepads = [...(navigator.getGamepads?.() || [])].filter(Boolean);
+        const currentIndices = new Set(gamepads.map((gamepad) => gamepad.index));
+        const hasNewController = gamepads.some((gamepad) => !connectedGamepadIndices.has(gamepad.index));
+
+        if (gamepads.length) {
+          const readyMessage = `${gamepads.length} ${gamepads.length === 1 ? "controller" : "controllers"} connected: direction/A/Start selects; A/Start/X/RT plays; B deselects.`;
+          if (controllerStatus.textContent !== readyMessage) controllerStatus.textContent = readyMessage;
+
+          const direction = gamepads.map(readDirection).find(Boolean) || "";
+          const cancelIsPressed = gamepads.some((gamepad) => gamepad.buttons[1]?.pressed);
+          const resumeIsPressed = gamepads.some((gamepad) => gamepad.buttons[0]?.pressed || gamepad.buttons[9]?.pressed);
+          const confirmIsPressed = gamepads.some((gamepad) => [0, 2, 7, 9].some((button) => gamepad.buttons[button]?.pressed));
+          const wasSelecting = selectionSource !== null;
+          if (cancelIsPressed) {
+            deselectCard();
+          } else if (!hasNewController && !wasSelecting) {
+            if ((direction && direction !== activeDirection) || (resumeIsPressed && !resumeWasPressed)) {
+              selectCard(Math.max(0, selectedCardIndex));
+              nextMoveAt = timestamp + GAMEPAD_REPEAT_DELAY;
+            }
+          } else if (!hasNewController && direction && (direction !== activeDirection || timestamp >= nextMoveAt)) {
+            moveSelection(direction);
+            nextMoveAt = timestamp + (direction === activeDirection ? GAMEPAD_REPEAT_RATE : GAMEPAD_REPEAT_DELAY);
+          }
+          activeDirection = direction;
+
+          if (!cancelIsPressed && wasSelecting && !hasNewController && confirmIsPressed && !confirmWasPressed && selectedCardIndex >= 0 && !launchInProgress) {
+            selectCard(selectedCardIndex);
+            getCards()[selectedCardIndex]?.click();
+          }
+          confirmWasPressed = confirmIsPressed;
+          resumeWasPressed = resumeIsPressed;
+        } else {
+          activeDirection = "";
+          confirmWasPressed = false;
+          resumeWasPressed = false;
+        }
+
+        connectedGamepadIndices.forEach((index) => {
+          if (!currentIndices.has(index)) connectedGamepadIndices.delete(index);
+        });
+        currentIndices.forEach((index) => connectedGamepadIndices.add(index));
+
+        requestAnimationFrame(pollGamepads);
+      }
+
+      function init() {
+        const games = [...GAMES];
+        grid.replaceChildren(...games.map(renderCard));
+        count.textContent = `${games.length} ${games.length === 1 ? "game" : "games"} available`;
+        empty.classList.toggle("is-visible", games.length === 0);
+
+        getCards().forEach((card, index) => {
+          card.addEventListener("click", launchGame);
+          card.addEventListener("focus", () => selectCard(index, {
+            focus: false,
+            source: card.matches(":focus-visible") ? "navigation" : "pointer"
+          }));
+          card.addEventListener("pointerenter", () => selectCard(index, { focus: false, source: "pointer" }));
+          card.addEventListener("pointerleave", () => {
+            if (selectionSource !== "pointer" || selectedCardIndex !== index) return;
+            card.classList.remove("gamepad-selected");
+            selectionSource = null;
+          });
+        });
+
+        window.addEventListener("gamepadconnected", (event) => {
+          controllerStatus.textContent = `${event.gamepad.id || "Controller"} connected. All connected controllers share the highlighted game.`;
+        });
+
+        window.addEventListener("gamepaddisconnected", (event) => {
+          connectedGamepadIndices.delete(event.gamepad.index);
+          controllerStatus.textContent = "A controller disconnected. Remaining controllers can continue, or reconnect it at any time.";
+        });
+
+        requestAnimationFrame(pollGamepads);
+        window.addEventListener("pageshow", () => { launchInProgress = false; });
+      }
+
+      init();
+    </script>
+  </body>
+</html>
