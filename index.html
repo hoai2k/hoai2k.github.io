@@ -359,6 +359,44 @@
         text-align: center;
       }
 
+      /* Sits where the panel's blurb used to. A button until this browser holds
+         a pass, a badge afterwards — and neither says what it is for. */
+      .auth-slot button {
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.95rem;
+        padding: 10px 20px;
+        width: 100%;
+      }
+
+      .auth-slot button:hover,
+      .auth-slot button:focus-visible {
+        border-color: var(--muted);
+      }
+
+      .auth-badge {
+        align-items: center;
+        color: var(--muted);
+        display: inline-flex;
+        font-size: 0.95rem;
+        gap: 8px;
+      }
+
+      .auth-badge::before {
+        /* A tick, drawn rather than an image so it inherits the colour. */
+        content: "";
+        border: solid currentColor;
+        border-width: 0 2px 2px 0;
+        height: 9px;
+        margin-top: -3px;
+        rotate: 45deg;
+        width: 5px;
+      }
+
       .empty.is-visible {
         display: block;
       }
@@ -621,8 +659,14 @@
           <p class="intro">A compact arcade shelf of browser games, party brawlers, physics experiments, racing prototypes, and couch multiplayer chaos.</p>
         </div>
         <aside class="status-panel">
-          <strong>Launch straight into a game.</strong>
-          <p>A hand-picked shelf of browser games, each linked directly to its playable page.</p>
+          <!-- Either a button or a badge, filled in by init() once localStorage
+               has been read. It ships as the button so a viewer with scripting
+               off is offered the thing that leads somewhere, and it says
+               nothing about what it unlocks — the shelf simply has more on it
+               afterwards. -->
+          <div class="auth-slot" id="authSlot">
+            <button type="button" id="authButton">Authenticate</button>
+          </div>
           <p class="controller-status" id="controllerStatus" role="status">Controllers share one selection: direction/A/Start selects; A/Start/X/RT plays; B deselects.</p>
         </aside>
       </section>
@@ -822,6 +866,45 @@
       let resumeWasPressed = false;
       const connectedGamepadIndices = new Set();
 
+      const authSlot = document.getElementById("authSlot");
+
+      /**
+       * The door, used here as a sign-in box rather than as a gate.
+       *
+       * This page is public and only its locked cards are hidden, so the door
+       * is dismissible — which means resolving does NOT mean admission, hence
+       * the hasPass() re-check before reloading. Its words are deliberately
+       * plain: it asks for a code, and says nothing about there being more
+       * shelf behind it.
+       */
+      async function authenticate() {
+        const { openGate } = await import("./gate/gate.js");
+        await openGate({
+          title: "Authenticate",
+          blurb: "Enter your access code.",
+          game: "library",
+          dismissible: true
+        });
+        if (hasPass()) location.reload();
+      }
+
+      /** A button for a browser that holds no pass; a badge for one that does. */
+      function renderAuth(unlocked) {
+        authSlot.replaceChildren();
+        if (unlocked) {
+          const badge = document.createElement("span");
+          badge.className = "auth-badge";
+          badge.textContent = "Authenticated";
+          authSlot.append(badge);
+          return;
+        }
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = "Authenticate";
+        button.addEventListener("click", authenticate);
+        authSlot.append(button);
+      }
+
       function renderCard(game) {
         const card = template.content.firstElementChild.cloneNode(true);
         const thumb = card.querySelector(".thumb");
@@ -1007,8 +1090,51 @@
         requestAnimationFrame(pollGamepads);
       }
 
+      /**
+       * The games that sit behind the invite door, by slug.
+       *
+       * Their cards are hidden from anyone this browser has no pass for. That
+       * is presentation, not protection — the door on each game is what
+       * actually turns people away, and this list ships in the page like
+       * everything else. What it buys is that a passer-by sees a shelf of
+       * public games rather than a shelf of locked ones, which is the whole
+       * point of not advertising what they cannot open.
+       *
+       * KEEP IT IN STEP with the games that actually carry the gate. A slug
+       * added here and not gated hides a game for no reason; a game gated and
+       * not listed here shows a card that opens onto a door.
+       */
+      const GATED = new Set([
+        "mando", "jjkbrawler", "battlebotarena", "rounders",
+        "jujutsubattlegrounds", "supergoatman", "tennis"
+      ]);
+
+      /**
+       * Does this browser hold an invite pass?
+       *
+       * The same key the games use, and readable here because every game and
+       * this library share one origin (games.hoai.net). A malformed or
+       * hand-typed blob reads as "no pass" rather than throwing on a boot.
+       */
+      function hasPass() {
+        try {
+          const raw = localStorage.getItem("gate.pass");
+          if (!raw) return false;
+          const pass = JSON.parse(raw);
+          return Boolean(pass && typeof pass.id === "string" && pass.id !== "");
+        } catch {
+          return false;   // private mode, or storage disabled entirely
+        }
+      }
+
       function init() {
-        const games = [...GAMES];
+        const unlocked = hasPass();
+        const games = unlocked ? [...GAMES] : GAMES.filter((game) => !GATED.has(game.slug));
+        // The way back in for a friend who has a code but no invite link — a
+        // new phone, cleared site data. Without it the shelf is a dead end for
+        // exactly the people it is meant for, since the cards that carry the
+        // door are the ones being hidden.
+        renderAuth(unlocked);
         grid.replaceChildren(...games.map(renderCard));
         count.textContent = `${games.length} ${games.length === 1 ? "game" : "games"} available`;
         empty.classList.toggle("is-visible", games.length === 0);
