@@ -109,7 +109,9 @@
 
       .hero {
         display: grid;
-        grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+        /* The right column used to hold a panel and reserved 280px for it. It
+           holds one control now, so it takes only what that control needs. */
+        grid-template-columns: minmax(0, 1fr) auto;
         gap: 26px;
         align-items: end;
         margin-bottom: 24px;
@@ -154,26 +156,6 @@
         line-height: 1.6;
       }
 
-      .status-panel {
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        background: var(--panel);
-        padding: 18px;
-        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
-      }
-
-      .status-panel strong {
-        display: block;
-        font-size: 0.95rem;
-      }
-
-      .status-panel p {
-        margin: 8px 0 0;
-        color: var(--muted);
-        font-size: 0.92rem;
-        line-height: 1.5;
-      }
-
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -208,11 +190,6 @@
 
       .game-card.gamepad-selected {
         box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42), 0 0 0 3px rgba(184, 255, 79, 0.72);
-      }
-
-      .controller-status {
-        color: var(--lime) !important;
-        font-weight: 800;
       }
 
       .thumb {
@@ -361,6 +338,11 @@
 
       /* Sits where the panel's blurb used to. A button until this browser holds
          a pass, a badge afterwards — and neither says what it is for. */
+      .auth-slot {
+        justify-self: end;
+        align-self: end;
+      }
+
       .auth-slot button {
         background: transparent;
         border: 1px solid var(--line);
@@ -370,7 +352,6 @@
         font: inherit;
         font-size: 0.95rem;
         padding: 10px 20px;
-        width: 100%;
       }
 
       .auth-slot button:hover,
@@ -453,6 +434,12 @@
 
         .hero {
           grid-template-columns: 1fr;
+        }
+
+        /* One column: the control lines up under the text rather than hugging
+           the far edge, where it would read as unrelated to anything. */
+        .auth-slot {
+          justify-self: start;
           gap: 14px;
           margin-bottom: 16px;
           padding-bottom: 18px;
@@ -474,15 +461,6 @@
           max-width: 35rem;
           font-size: 0.98rem;
           line-height: 1.48;
-        }
-
-        .status-panel {
-          padding: 14px;
-          box-shadow: 0 14px 44px rgba(0, 0, 0, 0.26);
-        }
-
-        .status-panel p {
-          font-size: 0.86rem;
         }
 
         .grid {
@@ -658,17 +636,15 @@
           <h1 id="pageTitle">Games by Hoai Nguyen</h1>
           <p class="intro">A compact arcade shelf of browser games, party brawlers, physics experiments, racing prototypes, and couch multiplayer chaos.</p>
         </div>
-        <aside class="status-panel">
-          <!-- Either a button or a badge, filled in by init() once localStorage
-               has been read. It ships as the button so a viewer with scripting
-               off is offered the thing that leads somewhere, and it says
-               nothing about what it unlocks — the shelf simply has more on it
-               afterwards. -->
-          <div class="auth-slot" id="authSlot">
-            <button type="button" id="authButton">Authenticate</button>
-          </div>
-          <p class="controller-status" id="controllerStatus" role="status">Controllers share one selection: direction/A/Start selects; A/Start/X/RT plays; B deselects.</p>
-        </aside>
+        <!-- Either a button or a badge, swapped by init() once localStorage has
+             been read. Bare on the hero rather than inside a panel: it is one
+             control, not a region. It ships as the button so a viewer with
+             scripting off is offered the thing that leads somewhere, and it
+             says nothing about what it unlocks — the shelf simply has more on
+             it afterwards. -->
+        <div class="auth-slot" id="authSlot">
+          <button type="button" id="authButton">Authenticate</button>
+        </div>
       </section>
 
       <section class="grid" id="gameGrid" aria-live="polite"></section>
@@ -852,7 +828,6 @@
       const count = document.querySelector("#libraryCount");
       const empty = document.querySelector("#emptyState");
       const template = document.querySelector("#gameCardTemplate");
-      const controllerStatus = document.querySelector("#controllerStatus");
 
       const GAMEPAD_DEADZONE = 0.55;
       const GAMEPAD_REPEAT_DELAY = 360;
@@ -1049,9 +1024,6 @@
         const hasNewController = gamepads.some((gamepad) => !connectedGamepadIndices.has(gamepad.index));
 
         if (gamepads.length) {
-          const readyMessage = `${gamepads.length} ${gamepads.length === 1 ? "controller" : "controllers"} connected: direction/A/Start selects; A/Start/X/RT plays; B deselects.`;
-          if (controllerStatus.textContent !== readyMessage) controllerStatus.textContent = readyMessage;
-
           const direction = gamepads.map(readDirection).find(Boolean) || "";
           const cancelIsPressed = gamepads.some((gamepad) => gamepad.buttons[1]?.pressed);
           const resumeIsPressed = gamepads.some((gamepad) => gamepad.buttons[0]?.pressed || gamepad.buttons[9]?.pressed);
@@ -1153,13 +1125,11 @@
           });
         });
 
-        window.addEventListener("gamepadconnected", (event) => {
-          controllerStatus.textContent = `${event.gamepad.id || "Controller"} connected. All connected controllers share the highlighted game.`;
-        });
-
+        // Still needed: the pad has to be forgotten, or reconnecting it reads as
+        // an already-known controller. Only its status line went away with the
+        // panel that used to show it.
         window.addEventListener("gamepaddisconnected", (event) => {
           connectedGamepadIndices.delete(event.gamepad.index);
-          controllerStatus.textContent = "A controller disconnected. Remaining controllers can continue, or reconnect it at any time.";
         });
 
         requestAnimationFrame(pollGamepads);
