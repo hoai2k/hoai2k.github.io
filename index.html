@@ -871,7 +871,36 @@
           game: "library",
           dismissible: true
         });
-        if (hasPass()) location.reload();
+        if (hasPass()) { location.reload(); return; }
+        // Turned away or dismissed. A code left in the address bar would throw
+        // the door back up on the next reload, so a spent one goes now.
+        stripInvite();
+      }
+
+      /** Is there an invite code in the address bar? `?invite=CODE`. */
+      function inviteInUrl() {
+        try {
+          const code = new URL(location.href).searchParams.get("invite");
+          return Boolean(code && code.trim() !== "");
+        } catch {
+          return false;   // an exotic URL is not worth failing a render over
+        }
+      }
+
+      /**
+       * Take a spent invite back out of the address bar.
+       *
+       * gate.js does this itself on the way through the door, so this covers
+       * the two turns that never open one: a browser that already holds a pass,
+       * and a visitor who dismissed the door instead of using the code.
+       */
+      function stripInvite() {
+        try {
+          const url = new URL(location.href);
+          if (!url.searchParams.has("invite")) return;
+          url.searchParams.delete("invite");
+          history.replaceState(null, "", url.pathname + (url.search || "") + url.hash);
+        } catch { /* nothing worth failing a render over */ }
       }
 
       /** A button for a browser that holds no pass; a badge for one that does. */
@@ -1145,6 +1174,21 @@
 
         requestAnimationFrame(pollGamepads);
         window.addEventListener("pageshow", () => { launchInProgress = false; });
+
+        // An invite link redeems itself here exactly as it does in front of a
+        // game: openGate() spends `?invite=CODE` on arrival, so the door only
+        // flashes up long enough to check it, then the shelf reloads with the
+        // gated cards on it. Nothing to click and nothing to type — which is
+        // the point, since the friend being invited is holding a link, not a
+        // code. A code that is refused leaves the door standing with its
+        // complaint, the code in the box to correct, and a way back to the
+        // public shelf.
+        //
+        // The shelf is rendered first on purpose: the door is dismissible, so
+        // whatever is behind it has to be something worth being left with.
+        if (!inviteInUrl()) return;
+        if (unlocked) stripInvite();   // already in: just tidy the address bar
+        else authenticate();
       }
 
       init();
