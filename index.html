@@ -874,7 +874,7 @@
         if (hasPass()) { location.reload(); return; }
         // Turned away or dismissed. A code left in the address bar would throw
         // the door back up on the next reload, so a spent one goes now.
-        stripInvite();
+        stripGateParam("invite");
       }
 
       /** Is there an invite code in the address bar? `?invite=CODE`. */
@@ -887,18 +887,27 @@
         }
       }
 
+      /** Is `?gatereset=1` in the address bar? */
+      function gateResetInUrl() {
+        try {
+          return new URL(location.href).searchParams.has("gatereset");
+        } catch {
+          return false;
+        }
+      }
+
       /**
-       * Take a spent invite back out of the address bar.
+       * Take a spent gate parameter back out of the address bar.
        *
        * gate.js does this itself on the way through the door, so this covers
        * the two turns that never open one: a browser that already holds a pass,
        * and a visitor who dismissed the door instead of using the code.
        */
-      function stripInvite() {
+      function stripGateParam(name) {
         try {
           const url = new URL(location.href);
-          if (!url.searchParams.has("invite")) return;
-          url.searchParams.delete("invite");
+          if (!url.searchParams.has(name)) return;
+          url.searchParams.delete(name);
           history.replaceState(null, "", url.pathname + (url.search || "") + url.hash);
         } catch { /* nothing worth failing a render over */ }
       }
@@ -1139,7 +1148,29 @@
         }
       }
 
+      /** Forget this browser's pass. The owner's way back to the door. */
+      function forgetPass() {
+        try { localStorage.removeItem("gate.pass"); } catch { /* private mode */ }
+      }
+
       function init() {
+        // `?gatereset=1` — the same escape hatch the games carry, honoured here
+        // too. gate.js only runs it from inside openGate(), and this page keeps
+        // its door shut until somebody asks for it, so the shelf would have
+        // ignored the parameter that every game obeys. It is stripped straight
+        // away: left in the bar it would fire again on the next reload, and an
+        // invite alongside it is left alone, being unspent.
+        //
+        // It is not a way *in*. Forgetting a pass can only cost you the door
+        // you were already through.
+        if (gateResetInUrl()) {
+          forgetPass();
+          stripGateParam("gatereset");
+        }
+        // The console form, for the same job without editing the URL. Defined
+        // here rather than by gate.js, which only reaches it via openGate().
+        try { window.gateReset = () => { forgetPass(); location.reload(); }; } catch { /* sealed window */ }
+
         const unlocked = hasPass();
         const games = unlocked ? [...GAMES] : GAMES.filter((game) => !GATED.has(game.slug));
         // The way back in for a friend who has a code but no invite link — a
@@ -1187,7 +1218,7 @@
         // The shelf is rendered first on purpose: the door is dismissible, so
         // whatever is behind it has to be something worth being left with.
         if (!inviteInUrl()) return;
-        if (unlocked) stripInvite();   // already in: just tidy the address bar
+        if (unlocked) stripGateParam("invite");   // already in: tidy the address bar
         else authenticate();
       }
 

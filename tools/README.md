@@ -8,6 +8,10 @@ They were in `mando/tools/gate/` and `cambrian/tools/`, which made whichever
 game happened to hold them look like the owner of something every game uses.
 This repository is the library, so it is the honest home for them.
 
+The door as it is *used* — `?invite=CODE`, `?gatereset=1`, `?gatetest=1`, and
+where the stats pages live — is in the [top-level README](../README.md). What
+follows is the deployment side of it.
+
 | | |
 |---|---|
 | `gate/Code.gs` | the invite gate's guest list and log |
