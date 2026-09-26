@@ -1,8 +1,8 @@
 # The scripts behind the games
 
-The Apps Script back ends and the shared client door live here rather than in
-any one game's repository. They are not part of this site — nothing serves or
-imports them, and `/tools/` exists only so there is one place to look.
+The Apps Script back ends live here rather than in any one game's repository.
+They are not part of this site's own pages — nothing serves or imports
+them — and `/tools/` exists only so there is one place to look.
 
 They were in `mando/tools/gate/` and `cambrian/tools/`, which made whichever
 game happened to hold them look like the owner of something every game uses.
@@ -15,8 +15,18 @@ follows is the deployment side of it.
 | | |
 |---|---|
 | `gate/Code.gs` | the invite gate's guest list and log |
-| `gate/gate.js` | the door itself, as plain ES module JavaScript |
 | `feedback/Code.gs` | the feedback inbox |
+
+**The door's client script is NOT under `/tools/`.** It is
+[`/gate/gate.js`](../gate/gate.js), at the site root, because this library
+imports and runs it live for its own "Authenticate" button — see
+`## gate.js is copied, not imported` below. There used to be a second copy
+here, at `tools/gate/gate.js`, described as "the canonical reference"; that
+was the wrong call. Two copies of one file in the same repository, at paths
+that differ by a single directory segment, is exactly the shape of thing that
+goes stale without anyone noticing — this one did, within the same session it
+was created in. There is one file now, and it is the one actually serving
+traffic, which is a better canonical copy than an inert one ever was.
 
 ## Two spreadsheets, two deployments, on purpose
 
@@ -28,10 +38,12 @@ deployment would publish the gate's URL in every bundle, let one bug in the
 feedback path reach the codes, and let a flood of feedback burn the daily quota
 the front door of every game depends on.
 
-## `gate/gate.js` is copied, not imported
+## `gate.js` is copied, not imported
 
-Six games carry a byte-identical copy of it, because they are no-build static
-sites with nowhere to import from. `mando` carries the same door as TypeScript
+[`/gate/gate.js`](../gate/gate.js) is the canonical copy — this library's own
+runtime dependency, not a reference sitting idle under `/tools/`. Six games
+carry a byte-identical copy of it, because they are no-build static sites with
+nowhere to import from. `mando` carries the same door as TypeScript
 (`src/gate/gate.ts`) because it is a Vite site.
 
 **Change one and change all of them**, or the games start disagreeing about who
