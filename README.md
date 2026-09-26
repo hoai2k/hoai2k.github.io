@@ -73,16 +73,57 @@ local runs and test tooling never meet it. `?gatetest=1` switches it on for
 that page. Without it, an invite cannot be redeemed locally either — the door
 that would spend it never opens.
 
-## Public access — the owner's own switch
+## Public access — one file, no code required
 
-There is a fourth way through the door, and it has no URL parameter: **Make
-everything public, for now…** in the Invites menu on the gate spreadsheet.
-While it is on, every game and this shelf treat every visitor as though
-already admitted — no code, no door — without writing a pass for any of them.
-It is temporary and re-asked on every visit by anyone who does not already
-hold one, so turning it back off shows the door again on the very next load.
-It never touches a friend's real pass either way. Setup and the exact
-mechanics are in [`mando/docs/AUTH.md`](https://github.com/hoai2k/mando/blob/main/docs/AUTH.md#turning-the-code-off-temporarily-public-access).
+There is a fourth way through the door, and it has no URL parameter and no
+spreadsheet menu: **[`public-access.json`](public-access.json)**, at the root
+of this repository.
+
+```json
+{ "publicAccess": false }
+```
+
+Edit that one field on GitHub — the pencil icon on the file's page — and
+commit to `main`. Set it to `true` and every game and this shelf treat every
+visitor as though already admitted, with no code and no door, until it is set
+back to `false`. Nothing else to touch: no Apps Script, no Sheet, no
+redeploying a game.
+
+It never writes a pass for anyone let in this way — the file is re-read on
+every visit by anyone who does not already hold one, so flipping it back to
+`false` shows the door again on the very next load, with nothing stored
+anywhere to clear first. And it never touches a friend's *real* pass either
+way: someone who already holds one short-circuits before this file is even
+asked about. A GitHub Pages edge cache means a change can take up to ten
+minutes to reach a *stale cached copy* of the file, which the door works
+around with a cache-busting request — see `publicAccessOn` in `gate/gate.js`
+for exactly how, and the fuller write-up in
+[`mando/docs/AUTH.md`](https://github.com/hoai2k/mando/blob/main/docs/AUTH.md#turning-the-code-off-temporarily-public-access).
+
+## Repositories using the gate
+
+Every repository under this account, and whether it touches the gate:
+
+| Repository | Uses the gate | How |
+|---|---|---|
+| [`hoai2k.github.io`](.) | **Yes — this is its home** | `gate/gate.js` (the canonical copy), `tools/gate/Code.gs`, `public-access.json` |
+| [`mando`](https://github.com/hoai2k/mando) | **Yes, gated** | `src/gate/gate.ts` — the same door as TypeScript, since it is a Vite build |
+| [`jjkbrawler`](https://github.com/hoai2k/jjkbrawler) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
+| [`battlebotarena`](https://github.com/hoai2k/battlebotarena) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
+| [`rounders`](https://github.com/hoai2k/rounders) | **Yes, gated** | `js/gate/gate.js` — byte-identical copy |
+| [`jujutsubattlegrounds`](https://github.com/hoai2k/jujutsubattlegrounds) | **Yes, gated** | `src/gate/gate.js`, and a second copy at `fable5.1/src/gate/gate.js` for its second build |
+| [`supergoatman`](https://github.com/hoai2k/supergoatman) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
+| [`tennis`](https://github.com/hoai2k/tennis) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
+| [`cambrian`](https://github.com/hoai2k/cambrian) | No — but reads the pass | `src/shared/feedback.ts` reads `gate.pass` from `localStorage`, unnamespaced, only to pre-fill a returning reporter's name on its feedback form. The game itself is not gated: nothing in it ever shows a door. |
+| `francis`, `mechmayhem`, `mini`, `bloxverse`, `earth`, `mechbrawler`, `swingers`, `dinoblocks` | No | Checked directly (2026-09-26): no reference to the gate, the endpoint, or `gate.pass` in any of them. |
+
+**Eight copies of `gate.js`, one hash.** `md5sum` across all eight
+no-build/Vite copies (everything above except `mando`'s TypeScript version,
+which is the same design in a different language) is the actual check —
+they were identical the last time this table was true. If you add a game,
+add its row here in the same commit that adds the gate to it; if you ever
+find a row that has drifted from the file it describes, that is the bug to
+fix, not the table.
 
 ## Stats pages
 
