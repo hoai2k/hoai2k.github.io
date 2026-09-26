@@ -73,6 +73,17 @@ local runs and test tooling never meet it. `?gatetest=1` switches it on for
 that page. Without it, an invite cannot be redeemed locally either — the door
 that would spend it never opens.
 
+## Public access — the owner's own switch
+
+There is a fourth way through the door, and it has no URL parameter: **Make
+everything public, for now…** in the Invites menu on the gate spreadsheet.
+While it is on, every game and this shelf treat every visitor as though
+already admitted — no code, no door — without writing a pass for any of them.
+It is temporary and re-asked on every visit by anyone who does not already
+hold one, so turning it back off shows the door again on the very next load.
+It never touches a friend's real pass either way. Setup and the exact
+mechanics are in [`mando/docs/AUTH.md`](https://github.com/hoai2k/mando/blob/main/docs/AUTH.md#turning-the-code-off-temporarily-public-access).
+
 ## Stats pages
 
 Each game keeps its own visitor stats page at `/<game>/stats/`, counted by

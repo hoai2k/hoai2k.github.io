@@ -864,14 +864,19 @@
        * shelf behind it.
        */
       async function authenticate() {
-        const { openGate } = await import("./gate/gate.js");
+        const { openGate, publicAccessOn } = await import("./gate/gate.js");
         await openGate({
           title: "Authenticate",
           blurb: "Enter your access code.",
           game: "library",
           dismissible: true
         });
-        if (hasPass()) { location.reload(); return; }
+        // Two ways this resolves as "let them in": a real pass was written,
+        // or the owner's public-access switch was on — which openGate() acts
+        // on silently, without ever writing one. hasPass() alone would miss
+        // the second, and leave a visitor the switch already let in staring
+        // at the locked shelf they just "authenticated" against.
+        if (hasPass() || await publicAccessOn()) { location.reload(); return; }
         // Turned away or dismissed. A code left in the address bar would throw
         // the door back up on the next reload, so a spent one goes now.
         stripGateParam("invite");
@@ -1153,6 +1158,54 @@
         try { localStorage.removeItem("gate.pass"); } catch { /* private mode */ }
       }
 
+      /**
+       * Render the shelf for one state: everything, or just the public games.
+       * Pulled out of `init()` so the same rendering runs whether the answer
+       * came from a pass already in hand or from a follow-up check that found
+       * the owner's public-access switch on — see `checkPublicAccess`.
+       */
+      function renderList(unlocked) {
+        const games = unlocked ? [...GAMES] : GAMES.filter((game) => !GATED.has(game.slug));
+        renderAuth(unlocked);
+        grid.replaceChildren(...games.map(renderCard));
+        count.textContent = `${games.length} ${games.length === 1 ? "game" : "games"} available`;
+        empty.classList.toggle("is-visible", games.length === 0);
+
+        getCards().forEach((card, index) => {
+          card.addEventListener("click", launchGame);
+          card.addEventListener("focus", () => selectCard(index, {
+            focus: false,
+            source: card.matches(":focus-visible") ? "navigation" : "pointer"
+          }));
+          card.addEventListener("pointerenter", () => selectCard(index, { focus: false, source: "pointer" }));
+          card.addEventListener("pointerleave", () => {
+            if (selectionSource !== "pointer" || selectedCardIndex !== index) return;
+            card.classList.remove("gamepad-selected");
+            selectionSource = null;
+          });
+        });
+      }
+
+      /**
+       * A locked visitor might be looking at a shelf the owner has
+       * temporarily opened to everyone. Checked once, after the first paint,
+       * and only for someone who would otherwise see the locked shelf — a
+       * visitor who already has a pass never pays for this GET, and neither
+       * does one already mid-authentication (see the callers in `init`).
+       *
+       * Failing to reach the endpoint, or any answer short of a clean "yes",
+       * reads as "no" and leaves the locked shelf exactly as it was — the
+       * same safe default `gate.js` itself falls back to.
+       */
+      async function checkPublicAccess() {
+        let isPublic = false;
+        try {
+          const { publicAccessOn } = await import("./gate/gate.js");
+          isPublic = await publicAccessOn();
+        } catch { /* unreachable reads as "no" */ }
+        if (isPublic) renderList(true);
+      }
+
       function init() {
         // `?gatereset=1` — the same escape hatch the games carry, honoured here
         // too. gate.js only runs it from inside openGate(), and this page keeps
@@ -1172,29 +1225,11 @@
         try { window.gateReset = () => { forgetPass(); location.reload(); }; } catch { /* sealed window */ }
 
         const unlocked = hasPass();
-        const games = unlocked ? [...GAMES] : GAMES.filter((game) => !GATED.has(game.slug));
         // The way back in for a friend who has a code but no invite link — a
         // new phone, cleared site data. Without it the shelf is a dead end for
         // exactly the people it is meant for, since the cards that carry the
         // door are the ones being hidden.
-        renderAuth(unlocked);
-        grid.replaceChildren(...games.map(renderCard));
-        count.textContent = `${games.length} ${games.length === 1 ? "game" : "games"} available`;
-        empty.classList.toggle("is-visible", games.length === 0);
-
-        getCards().forEach((card, index) => {
-          card.addEventListener("click", launchGame);
-          card.addEventListener("focus", () => selectCard(index, {
-            focus: false,
-            source: card.matches(":focus-visible") ? "navigation" : "pointer"
-          }));
-          card.addEventListener("pointerenter", () => selectCard(index, { focus: false, source: "pointer" }));
-          card.addEventListener("pointerleave", () => {
-            if (selectionSource !== "pointer" || selectedCardIndex !== index) return;
-            card.classList.remove("gamepad-selected");
-            selectionSource = null;
-          });
-        });
+        renderList(unlocked);
 
         // Still needed: the pad has to be forgotten, or reconnecting it reads as
         // an already-known controller. Only its status line went away with the
@@ -1217,9 +1252,15 @@
         //
         // The shelf is rendered first on purpose: the door is dismissible, so
         // whatever is behind it has to be something worth being left with.
-        if (!inviteInUrl()) return;
-        if (unlocked) stripGateParam("invite");   // already in: tidy the address bar
-        else authenticate();
+        if (inviteInUrl()) {
+          if (unlocked) stripGateParam("invite");   // already in: tidy the address bar
+          else { authenticate(); return; }          // takes over; see its own public-access check
+        }
+
+        // A locked visitor with no invite to redeem this turn might still be
+        // looking at a temporarily public shelf. Skipped for anyone already
+        // unlocked, and for anyone `authenticate()` just took over for above.
+        if (!unlocked) checkPublicAccess();
       }
 
       init();

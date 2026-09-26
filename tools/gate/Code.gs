@@ -25,6 +25,11 @@
  * WHY THE BODY ARRIVES AS text/plain: a JSON content-type would make the
  * browser send a CORS preflight, and an Apps Script web app has no way to
  * answer one. `e.postData.contents` is the JSON either way.
+ *
+ * PUBLIC ACCESS is a second, independent way in — the owner's own switch,
+ * flipped from the Invites menu, that temporarily drops the code requirement
+ * for everyone, everywhere, without touching a single real pass. See
+ * `publicAccessOn_` and `togglePublicAccess` near the bottom.
  */
 
 /** The spreadsheet this writes to. Leave '' to use the bound sheet. */
@@ -105,6 +110,24 @@ var GAME_URLS = {
  *  to start working; the alternative is re-reading the tab on every arrival. */
 var CODES_TTL = 300;
 
+/**
+ * The identity every session ping and Signins row carries while public access
+ * is on. Distinct from any real friend's name, so it can never collide with
+ * one in the Who tab, and it is never written to PASS_STORE by the client —
+ * the whole point of the switch is that nothing is stored for it.
+ *
+ * MUST MATCH THE CLIENT'S PUBLIC_ID EXACTLY (`gate.js`'s `PUBLIC_ID`, and
+ * `gate.ts`'s in the mando repo) — it is how a switch-admitted session and a
+ * switch-admitted invite attempt end up as the same one row in Who, even
+ * though they are two different files that cannot share a literal.
+ */
+var PUBLIC_NAME = '(public access)';
+
+/** How long the public-access flag is cached, in seconds. A toggle can take
+ *  this long to reach a visitor already mid-check; a fresh page load sees it
+ *  immediately either way, since nothing is cached in the browser itself. */
+var PUBLIC_ACCESS_TTL = 30;
+
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
@@ -121,9 +144,15 @@ function doPost(e) {
   }
 }
 
-/** A GET is only ever a human checking the deployment is alive. */
+/**
+ * A GET is a health check — and now also the one question the door asks
+ * before it ever shows itself: is the code required right now? `publicAccess`
+ * is the only field that answers to anything; everything that reaches this
+ * has to treat its absence, or `false`, as "yes, the code is required",
+ * because that is the safe reading of a check that failed to say otherwise.
+ */
 function doGet() {
-  return json_({ ok: true, service: 'invite-gate' });
+  return json_({ ok: true, service: 'invite-gate', publicAccess: publicAccessOn_() });
 }
 
 /**
@@ -136,8 +165,21 @@ function normalize_(s) {
 }
 
 function handleInvite_(body) {
-  var code = normalize_(body.code);
   var game = String(body.game || '');
+
+  if (publicAccessOn_()) {
+    // The owner's switch already decided this. Whatever was typed, if
+    // anything, is beside the point — this is the door that was already
+    // supposed to be skipped, catching a page that rendered it a moment
+    // before the switch flipped. Logged with its own verdict so Signins and
+    // the Who tab can tell "the switch was on" apart from "a real invite was
+    // redeemed", which answer different questions later.
+    append_(SIGNIN_TAB, ['when', 'game', 'name', 'code', 'verdict'],
+            [new Date(), safe_(game, 60), PUBLIC_NAME, safe_(normalize_(body.code), 60), 'public']);
+    return { ok: true, id: PUBLIC_NAME, name: PUBLIC_NAME };
+  }
+
+  var code = normalize_(body.code);
   if (!code) return { ok: false, reason: 'no-code' };
 
   var found = lookup_(code);
@@ -344,14 +386,78 @@ function json_(obj) {
 // ---------------------------------------------------------------------------
 
 function onOpen() {
+  // Computed once, when the sheet opens, so the label already says which way
+  // the switch is currently pointing rather than a generic "Toggle…" that
+  // would need opening a dialog just to find out.
+  var isPublic = publicAccessOn_();
   SpreadsheetApp.getUi()
     .createMenu('Invites')
     .addItem('Invite a friend…', 'inviteFriend')
     .addItem('Show a friend’s link…', 'showLink')
     .addSeparator()
+    .addItem(isPublic ? 'Require the code again (public access is ON)' : 'Make everything public, for now…',
+             'togglePublicAccess')
+    .addSeparator()
     .addItem('Refresh the Who tab', 'refreshSummary')
     .addItem('Refused attempts (last 20)', 'showRefusals')
     .addToUi();
+}
+
+/**
+ * The owner's switch. While it is on, no game and no library page anywhere
+ * asks for a code — every visitor is treated as though already admitted,
+ * without writing a pass for any of them. It is a second, independent way
+ * in: it touches nothing in the Codes tab and nobody's stored pass, and it is
+ * re-asked fresh by every visitor who does not already hold one, so turning
+ * it back off shows the door again with nothing to clear first.
+ *
+ * STORED IN PropertiesService, NOT A SPREADSHEET CELL. No tab to create, no
+ * reason for the formula-injection defences in `safe_` to ever have to think
+ * about it — it is never rendered into a cell — and a menu item the owner
+ * already has open is a cleaner control than "find the right row and change
+ * TRUE to FALSE".
+ */
+function togglePublicAccess() {
+  var ui = SpreadsheetApp.getUi();
+  var isPublic = publicAccessOn_();
+
+  if (isPublic) {
+    PropertiesService.getScriptProperties().deleteProperty('PUBLIC_ACCESS');
+    CacheService.getScriptCache().remove('publicAccess');
+    ui.alert('The code is required again.',
+      'Reopen this menu to see it flip back. Anyone mid-session, with or without a real pass, is unaffected either way.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  var res = ui.alert('Make every game public?',
+    'Nobody will need a code — every game and the library open straight to the game, for ' +
+    'anyone with the link, until you turn this back off. Friends who already hold a code or a ' +
+    'saved pass are not affected either way. Continue?',
+    ui.ButtonSet.YES_NO);
+  if (res !== ui.Button.YES) return;
+
+  PropertiesService.getScriptProperties().setProperty('PUBLIC_ACCESS', 'true');
+  CacheService.getScriptCache().remove('publicAccess');
+  ui.alert('Public access is ON.',
+    'It can take up to ' + PUBLIC_ACCESS_TTL + ' seconds to reach a page that already loaded its ' +
+    'door; a fresh visit sees it immediately. Come back to this menu to turn it off.',
+    ui.ButtonSet.OK);
+}
+
+/**
+ * The switch, cached. PropertiesService is a network call of its own, and
+ * every visitor without a pass asks this once — reading the cache first
+ * means a toggle costs a spreadsheet-adjacent round trip only once every
+ * `PUBLIC_ACCESS_TTL` seconds rather than on every single arrival.
+ */
+function publicAccessOn_() {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get('publicAccess');
+  if (hit !== null) return hit === '1';
+  var v = PropertiesService.getScriptProperties().getProperty('PUBLIC_ACCESS') === 'true';
+  cache.put('publicAccess', v ? '1' : '0', PUBLIC_ACCESS_TTL);
+  return v;
 }
 
 /**
