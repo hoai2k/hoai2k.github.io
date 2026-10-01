@@ -757,17 +757,6 @@
     ]
   },
   {
-    "slug": "jujutsubattlegrounds",
-    "url": "/jujutsubattlegrounds/",
-    "title": "Jujutsu Battlegrounds",
-    "description": "A procedural 3D arena fighter with a large roster of sorcerers and curses, CPU battles, local multiplayer, and online hosting.",
-    "thumbnail": "assets/jujutsu-battlegrounds-gameplay.jpg",
-    "tags": [
-      "3D fighter",
-      "Online"
-    ]
-  },
-  {
     "slug": "mini/hopper",
     "url": "/mini/hopper/",
     "title": "Hopper the Grasshopper",
@@ -947,7 +936,7 @@
         if (game.thumbnail) {
           const picture = document.createElement("picture");
           const stem = game.thumbnail.split("/").pop().replace(/\.[^.]+$/, "");
-          const nativeScreens = new Set(["mechmayhem", "mando", "cambrian", "mini/hopper", "battlebotarena", "jjkbrawler", "rounders", "tennis", "jujutsubattlegrounds"]);
+          const nativeScreens = new Set(["mechmayhem", "mando", "cambrian", "mini/hopper", "battlebotarena", "jjkbrawler", "rounders", "tennis"]);
           const native = nativeScreens.has(game.slug);
           const cropPath = (variant) => native
             ? `thumbnails/${stem}-${variant}.webp`
@@ -1132,7 +1121,7 @@
        */
       const GATED = new Set([
         "mando", "jjkbrawler", "battlebotarena", "rounders",
-        "jujutsubattlegrounds", "supergoatman", "tennis"
+        "supergoatman", "tennis"
       ]);
 
       /**
