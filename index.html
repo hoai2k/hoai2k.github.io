@@ -802,6 +802,7 @@
   },
   {
     "slug": "charlie/dollpuppets",
+    "hidden": true,
     "url": "/charlie/dollpuppets/",
     "title": "Doll Puppets",
     "description": "A puppet stage for animated dolls with expressive poses, talking controls, and whimsical backdrops.",
@@ -1154,7 +1155,10 @@
        * the owner's public-access switch on — see `checkPublicAccess`.
        */
       function renderList(unlocked) {
-        const games = unlocked ? [...GAMES] : GAMES.filter((game) => !GATED.has(game.slug));
+        // `hidden: true` takes a card off the shelf without deleting its entry
+        // or its thumbnails, so putting it back is deleting that one line.
+        const shelved = GAMES.filter((game) => !game.hidden);
+        const games = unlocked ? shelved : shelved.filter((game) => !GATED.has(game.slug));
         renderAuth(unlocked);
         grid.replaceChildren(...games.map(renderCard));
         count.textContent = `${games.length} ${games.length === 1 ? "game" : "games"} available`;
