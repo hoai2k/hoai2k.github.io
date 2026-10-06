@@ -679,14 +679,15 @@
     <script>
       const GAMES = [
   {
-    "slug": "mechmayhem",
-    "url": "/mechmayhem/",
-    "title": "Mech Mayhem",
-    "description": "A 3D mech battle arena with a sordid cast of robots in destructible cities, with local multiplayer, and lots of ultimates.",
-    "thumbnail": "assets/mech-mayhem-gameplay.png",
+    "slug": "cambrian",
+    "url": "/cambrian/",
+    "title": "Ancient Seas Trilogy",
+    "description": "Three prehistoric ocean survival games — Cambrian Conquest, Devonian Domination, and Triassic Triumph — where you eat, grow, fight, and flee across 500 million years.",
+    "thumbnail": "assets/ancient-seas-trilogy.png",
     "tags": [
-      "3D",
-      "Mech combat"
+      "Trilogy",
+      "Survival",
+      "Prehistoric"
     ]
   },
   {
@@ -701,15 +702,36 @@
     ]
   },
   {
-    "slug": "cambrian",
-    "url": "/cambrian/",
-    "title": "Ancient Seas Trilogy",
-    "description": "Three prehistoric ocean survival games — Cambrian Conquest, Devonian Domination, and Triassic Triumph — where you eat, grow, fight, and flee across 500 million years.",
-    "thumbnail": "assets/ancient-seas-trilogy.png",
+    "slug": "mechmayhem",
+    "url": "/mechmayhem/",
+    "title": "Mech Mayhem",
+    "description": "A 3D mech battle arena with a sordid cast of robots in destructible cities, with local multiplayer, and lots of ultimates.",
+    "thumbnail": "assets/mech-mayhem-gameplay.png",
     "tags": [
-      "Trilogy",
-      "Survival",
-      "Prehistoric"
+      "3D",
+      "Mech combat"
+    ]
+  },
+  {
+    "slug": "mini/bronzedrum",
+    "url": "/mini/bronzedrum/",
+    "title": "The Bronze Drum",
+    "description": "Beat drum commands to lead the Trưng sisters' army against Han rule, staged as a backlit paper-cut theatre.",
+    "thumbnail": "assets/bronze-drum.png",
+    "tags": [
+      "Rhythm",
+      "Story"
+    ]
+  },
+  {
+    "slug": "mini/widowsbay",
+    "url": "/mini/widowsbay/",
+    "title": "Widow's Bay",
+    "description": "A toy-theatre voyage set to Langan, Frost & Wane's song, in stencil-tinted Méliès colour.",
+    "thumbnail": "assets/widows-bay.png",
+    "tags": [
+      "Toy theatre",
+      "Adventure"
     ]
   },
   {
@@ -937,7 +959,7 @@
         if (game.thumbnail) {
           const picture = document.createElement("picture");
           const stem = game.thumbnail.split("/").pop().replace(/\.[^.]+$/, "");
-          const nativeScreens = new Set(["mechmayhem", "mando", "cambrian", "mini/hopper", "battlebotarena", "jjkbrawler", "rounders", "tennis"]);
+          const nativeScreens = new Set(["mechmayhem", "mando", "cambrian", "mini/hopper", "mini/bronzedrum", "mini/widowsbay", "battlebotarena", "jjkbrawler", "rounders", "tennis"]);
           const native = nativeScreens.has(game.slug);
           const cropPath = (variant) => native
             ? `thumbnails/${stem}-${variant}.webp`
