@@ -1,0 +1,13 @@
+{
+  "model": "opus",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent|Task|Workflow",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-fable.sh" }
+        ]
+      }
+    ]
+  }
+}
