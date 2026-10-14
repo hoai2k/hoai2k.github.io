@@ -9,6 +9,14 @@ the task, but merge it into `main` and push `main` before reporting done.
 Do not leave finished work parked on a feature branch waiting for a pull
 request, and do not open one unless it is asked for.
 
+## Push to `main` once per task
+
+This repository is private, so every push to `main` runs a deploy that is paid
+for in GitHub Actions minutes, and the account's allowance is small. Batch a
+task's work into one push to `main` at the end rather than pushing after every
+small step. Pushes to a working branch run nothing, so push those as often as
+you like.
+
 ## Models
 
 - Only a session already running on Fable may start Fable subagents, workers or helper agents. Opus,
