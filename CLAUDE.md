@@ -9,13 +9,18 @@ the task, but merge it into `main` and push `main` before reporting done.
 Do not leave finished work parked on a feature branch waiting for a pull
 request, and do not open one unless it is asked for.
 
-## Push to `main` once per task
+## Tests and deploys
 
-This repository is private, so every push to `main` runs a deploy that is paid
-for in GitHub Actions minutes, and the account's allowance is small. Batch a
-task's work into one push to `main` at the end rather than pushing after every
-small step. Pushes to a working branch run nothing, so push those as often as
-you like.
+Pushes to `main` build and deploy only; they run no tests. Tests are your job
+before you commit:
+
+- There are no automated tests; check the change in a browser (local server)
+  before committing.
+- Say in the commit message what you ran and that it passed.
+
+Every deploy is paid for in GitHub Actions minutes while the repository is
+private, so batch a task's work into one push to `main` at the end rather than
+pushing after every small step. Pushes to a working branch run nothing.
 
 ## Models
 
