@@ -1,5 +1,39 @@
 # Working in this repository
 
+## Deploy state: **DISABLED**
+
+This switch overrides every other instruction in this file about pushing,
+merging or fast-forwarding `main`, opening or merging pull requests into it,
+and deploying.
+
+- **DISABLED** means `main` is frozen to save GitHub Actions minutes:
+  - Commit your work and push **only your working branch** (name it
+    `claude/<topic>`; pushes to a working branch run no workflows). Never push,
+    merge or fast-forward `main`, and don't merge pull requests into it.
+  - Run tests and builds locally as usual (they cost no Actions minutes).
+  - End every change with this warning to the owner:
+    > ⚠️ Deploys are disabled for this repo: the change is on branch
+    > `<branch>`, NOT on `main`, and NOT deployed.
+- **ENABLED** means follow the normal push and deploy rules in this file.
+- **Turning deploys on** happens only when the owner explicitly asks for a push
+  to `main` (or to enable deploys). Then:
+  1. Change the heading above to `**ENABLED**` (this is what lets the push
+     guard below allow the push).
+  2. Merge the pending work: `git fetch origin && git branch -r --no-merged
+     origin/main` lists it. Merge oldest first, resolve conflicts, and run the
+     tests.
+  3. Push `main` once; that push deploys. If the owner disabled the deploy
+     workflow in the Actions tab, remind them to re-enable it.
+- **Turning deploys off**, when the owner asks: change the heading to
+  `**DISABLED**`, commit only that change with `[skip ci]` in the message (so
+  the push runs no workflow), and push `main`.
+- `.claude/hooks/deploy-guard.sh` enforces this for Claude sessions: while the
+  heading says DISABLED it refuses a `git push` to `main` and pull-request
+  merges into it, except a `[skip ci]` push that changes only this file and
+  `.claude/` (config, no workflow runs). It
+  reads the heading at the moment of the push, so flipping it to ENABLED is all
+  it takes to let the push through.
+
 ## Commit to `main` when a task is done
 
 This is a GitHub Pages site: `main` is what is published, so a change that
