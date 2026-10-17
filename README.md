@@ -109,6 +109,12 @@ finished games. Today that is every game in `mini`'s Prototype archive
 `mini/sites/` (`langanfrostandwane/`, `stratfordtennisclub/`, through
 `mini/sites/shared/private-site.js`).
 
+Such a page can be let back under the switch without touching code: it
+names its own override with `accessFile: 'public-access.json'`, a file in
+its folder holding `{ "followPublicAccess": false }`. Set that to `true` and
+the page follows this switch like the finished games. A missing or broken
+file keeps the page locked, so a slip never opens a prototype.
+
 ## Repositories using the gate
 
 Every repository under this account, and whether it touches the gate:
@@ -124,12 +130,12 @@ Every repository under this account, and whether it touches the gate:
 | [`supergoatman`](https://github.com/hoai2k/supergoatman) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
 | [`tennis`](https://github.com/hoai2k/tennis) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
 | [`cambrian`](https://github.com/hoai2k/cambrian) | No — but reads the pass | `src/shared/feedback.ts` reads `gate.pass` from `localStorage`, unnamespaced, only to pre-fill a returning reporter's name on its feedback form. The game itself is not gated: nothing in it ever shows a door. |
-| [`mini`](https://github.com/hoai2k/mini) | **Yes, gated** | Five byte-identical copies: `onemonster/`, `gliders/`, `bronzedrum/` and `icecreamcone/` under `game/src/gate/gate.js`, and `sites/shared/gate.js` for the private sites. The Prototype archive games (One Monster, Gliders) and the sites pass `ignorePublicAccess: true`; the library shows the archive only to pass holders |
+| [`mini`](https://github.com/hoai2k/mini) | **Yes, gated** | Five byte-identical copies: `onemonster/`, `gliders/`, `bronzedrum/` and `icecreamcone/` under `game/src/gate/gate.js`, and `sites/shared/gate.js` for the private sites. The Prototype archive games (One Monster, Gliders) and the sites pass `ignorePublicAccess: true` with their own `public-access.json` as `accessFile`; the library shows the archive only to pass holders |
 | `francis`, `mechmayhem`, `bloxverse`, `earth`, `mechbrawler`, `swingers`, `dinoblocks` | No | Checked directly (2026-09-26): no reference to the gate, the endpoint, or `gate.pass` in any of them. |
 
-**`ignorePublicAccess` (October 2026)** was added to `gate/gate.js` and
+**`ignorePublicAccess` and `accessFile` (October 2026)** were added to `gate/gate.js` and
 the `mini` copies only. The other repositories above still carry the copy
-from before it, which lacks an option none of them uses, so they behave the
+from before it, which lacks options none of them uses, so they behave the
 same; bring each up to date (and `mando`'s `gate.ts`) the next time it is
 touched.
 
