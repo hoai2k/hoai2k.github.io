@@ -104,7 +104,8 @@ for exactly how, and the fuller write-up in
 `openGate({ ..., ignorePublicAccess: true })` never reads this file, so the
 switch does not open it: only a real pass does. It is for unfinished
 prototypes and private test pages that should not go public with the
-finished games. Today that is `mini/onemonster/` and the private sites in
+finished games. Today that is every game in `mini`'s Prototype archive
+(`mini/onemonster/`, `mini/gliders/`) and the private sites in
 `mini/sites/` (`langanfrostandwane/`, `stratfordtennisclub/`, through
 `mini/sites/shared/private-site.js`).
 
@@ -123,7 +124,7 @@ Every repository under this account, and whether it touches the gate:
 | [`supergoatman`](https://github.com/hoai2k/supergoatman) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
 | [`tennis`](https://github.com/hoai2k/tennis) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
 | [`cambrian`](https://github.com/hoai2k/cambrian) | No — but reads the pass | `src/shared/feedback.ts` reads `gate.pass` from `localStorage`, unnamespaced, only to pre-fill a returning reporter's name on its feedback form. The game itself is not gated: nothing in it ever shows a door. |
-| [`mini`](https://github.com/hoai2k/mini) | **Yes, gated** | Four byte-identical copies: `onemonster/`, `bronzedrum/` and `icecreamcone/` under `game/src/gate/gate.js`, and `sites/shared/gate.js` for the private sites. One Monster and the sites pass `ignorePublicAccess: true` |
+| [`mini`](https://github.com/hoai2k/mini) | **Yes, gated** | Five byte-identical copies: `onemonster/`, `gliders/`, `bronzedrum/` and `icecreamcone/` under `game/src/gate/gate.js`, and `sites/shared/gate.js` for the private sites. The Prototype archive games (One Monster, Gliders) and the sites pass `ignorePublicAccess: true`; the library shows the archive only to pass holders |
 | `francis`, `mechmayhem`, `bloxverse`, `earth`, `mechbrawler`, `swingers`, `dinoblocks` | No | Checked directly (2026-09-26): no reference to the gate, the endpoint, or `gate.pass` in any of them. |
 
 **`ignorePublicAccess` (October 2026)** was added to `gate/gate.js` and
