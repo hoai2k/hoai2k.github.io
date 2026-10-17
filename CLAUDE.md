@@ -1,6 +1,6 @@
 # Working in this repository
 
-## Deploy state: **DISABLED**
+## Deploy state: **ENABLED**
 
 This switch overrides every other instruction in this file about pushing,
 merging or fast-forwarding `main`, opening or merging pull requests into it,
