@@ -40,7 +40,12 @@ punctuation thrown away, so `anya 7f2c9k` and `ANYA-7F2C9K` are the same code.
 **One invite admits a friend to everything.** The pass is stored under one key
 for the whole origin and never expires, so a code redeemed anywhere on
 `games.hoai.net` opens every game, and on this shelf it also reveals the cards
-that were hidden. The code itself is never stored — only the id and name the
+that were hidden, plus an **Apps** section below the games (Music Practice,
+Games Chat, Ear Trainer, MP3 Player and Image Annotator from the mini repo,
+listed in `APPS` in `index.html`). That section needs a real pass: the
+public-access switch below shows every game but never the apps. It only
+decides who sees them listed; the apps themselves open for anyone with the
+link. The code itself is never stored — only the id and name the
 endpoint answers with — so the browser holds no reusable secret.
 
 A refused code leaves the door standing with its complaint and the code in the

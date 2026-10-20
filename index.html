@@ -327,6 +327,21 @@
         font-size: 1.35rem;
       }
 
+      /* The apps shelf: only for visitors holding a real pass (see renderList). */
+      .apps-section {
+        margin-top: 56px;
+      }
+
+      .apps-section[hidden] {
+        display: none;
+      }
+
+      .section-title {
+        margin: 0 0 18px;
+        font-size: clamp(1.5rem, 2.6vw, 2rem);
+        line-height: 1.1;
+      }
+
       .empty {
         display: none;
         border: 1px dashed var(--line);
@@ -659,6 +674,11 @@
 
       <section class="grid" id="gameGrid" aria-live="polite"></section>
       <p class="empty" id="emptyState">No playable game folders were found.</p>
+
+      <section class="apps-section" id="appsSection" aria-labelledby="appsTitle" hidden>
+        <h2 class="section-title" id="appsTitle">Apps</h2>
+        <div class="grid" id="appGrid"></div>
+      </section>
     </main>
 
     <template id="gameCardTemplate">
@@ -669,7 +689,7 @@
           <h2 class="card-title"></h2>
           <p class="description"></p>
           <div class="play-row">
-            <span>Play now</span>
+            <span class="play-label">Play now</span>
             <span class="arrow" aria-hidden="true">›</span>
           </div>
         </div>
@@ -847,7 +867,79 @@
   }
 ];
 
+      /**
+       * Apps from the mini repo: tools rather than games. Listed on the shelf
+       * only for a browser holding a real invite pass, never because the
+       * owner's public-access switch is on (see renderList). The apps
+       * themselves are open to anyone with the link; this only decides who
+       * sees them here. Thumbnails are the mini library's cover art.
+       */
+      const APPS = [
+  {
+    "slug": "mini/musicpractice",
+    "url": "/mini/musicpractice/",
+    "title": "Music Practice",
+    "description": "A metronome from 40 to 500 BPM, a tuner, a cello drone, and a recorder that hears when you start and stop playing, then plays your take back.",
+    "thumbnail": "assets/music-practice.png",
+    "action": "Open",
+    "tags": [
+      "Music",
+      "Practice"
+    ]
+  },
+  {
+    "slug": "mini/chat",
+    "url": "/mini/chat/",
+    "title": "Games Chat",
+    "description": "Video chat with 75 silly face effects and 360° worlds, and 20 minigames to play together, from mini golf to trivia.",
+    "thumbnail": "assets/games-chat.png",
+    "action": "Open",
+    "tags": [
+      "Video chat",
+      "Online"
+    ]
+  },
+  {
+    "slug": "mini/eartrainer",
+    "url": "/mini/eartrainer/",
+    "title": "Ear Trainer",
+    "description": "Hear a melody, play it back on the piano. Hundreds of tunes from jazz, folk, classical, carols and film, with stars, streaks and a practice mode.",
+    "thumbnail": "assets/ear-trainer.png",
+    "action": "Open",
+    "tags": [
+      "Music",
+      "Piano"
+    ]
+  },
+  {
+    "slug": "mini/mp3player",
+    "url": "/mini/mp3player/",
+    "title": "MP3 Player",
+    "description": "The songs on your phone, tablet or computer, played like a streaming app: albums and artists, shuffle and repeat, a queue, a sleep timer and your own order. Works offline.",
+    "thumbnail": "assets/mp3-player.png",
+    "action": "Open",
+    "tags": [
+      "Music",
+      "Offline"
+    ]
+  },
+  {
+    "slug": "mini/imageannotator",
+    "url": "/mini/imageannotator/",
+    "title": "Image Annotator",
+    "description": "Open a picture and point things out with arrows, circles and drawing, each with an optional title, then save it to your photos or files.",
+    "thumbnail": "assets/image-annotator.png",
+    "action": "Open",
+    "tags": [
+      "Photos",
+      "Drawing"
+    ]
+  }
+];
+
       const grid = document.querySelector("#gameGrid");
+      const appGrid = document.querySelector("#appGrid");
+      const appsSection = document.querySelector("#appsSection");
       const count = document.querySelector("#libraryCount");
       const empty = document.querySelector("#emptyState");
       const template = document.querySelector("#gameCardTemplate");
@@ -955,6 +1047,7 @@
         card.setAttribute("aria-label", `Play ${game.title}`);
         card.querySelector(".card-title").textContent = game.title;
         card.querySelector(".description").textContent = game.description;
+        if (game.action) card.querySelector(".play-label").textContent = game.action;
 
         if (game.thumbnail) {
           const picture = document.createElement("picture");
@@ -1001,7 +1094,7 @@
       }
 
       function getCards() {
-        return [...grid.querySelectorAll(".game-card")];
+        return [...document.querySelectorAll("#gameGrid .game-card, #appGrid .game-card")];
       }
 
       function selectCard(index, { focus = true, source = "navigation" } = {}) {
@@ -1183,6 +1276,11 @@
         const games = unlocked ? shelved : shelved.filter((game) => !GATED.has(game.slug));
         renderAuth(unlocked);
         grid.replaceChildren(...games.map(renderCard));
+        // Apps need a pass actually held in this browser. `unlocked` can also
+        // mean the public-access switch is on, which must not show them.
+        const showApps = hasPass();
+        appGrid.replaceChildren(...(showApps ? APPS.map(renderCard) : []));
+        appsSection.hidden = !showApps;
         count.textContent = `${games.length} ${games.length === 1 ? "game" : "games"} available`;
         empty.classList.toggle("is-visible", games.length === 0);
 
