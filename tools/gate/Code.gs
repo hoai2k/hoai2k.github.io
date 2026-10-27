@@ -311,6 +311,7 @@ function googleTab_() {
     tab = book.insertSheet(GOOGLE_TAB);
     tab.appendRow(GOOGLE_HEADER);
     tab.setFrozenRows(1);
+    tidyTabs_();
   }
   var head = tab.getRange(1, STATUS_COL);
   if (String(head.getValue()) !== 'status' || !tab.getRange(2, STATUS_COL).getDataValidation()) {
@@ -579,8 +580,58 @@ function append_(tabName, header, row) {
     tab = book.insertSheet(tabName);
     tab.appendRow(header);
     tab.setFrozenRows(1);
+    tidyTabs_();
   }
   tab.appendRow(row);
+}
+
+/**
+ * THE TAB ORDER. The tabs the owner works in come first, in this order; the
+ * monthly session logs go last, oldest to newest, with every month but the
+ * current one hidden. Hidden tabs are still read (refreshSummary uses them
+ * all) and can be shown from the "All sheets" list at the bottom left.
+ */
+var TAB_ORDER = [CODES_TAB, GOOGLE_TAB, 'Who', SIGNIN_TAB, REFUSED_TAB];
+
+/**
+ * Put the tabs in that order and hide old session months. Runs whenever the
+ * script creates a tab (a new month's session tab, the first Google sign-in)
+ * and from the Invites menu. Never allowed to fail a request: anything it
+ * cannot do is skipped and logged.
+ */
+function tidyTabs_() {
+  try {
+    var book = book_();
+    var pos = 1;
+    for (var i = 0; i < TAB_ORDER.length; i++) {
+      var main = book.getSheetByName(TAB_ORDER[i]);
+      if (!main) continue;
+      moveTab_(book, main, pos++);
+    }
+    var current = sessionTab_();
+    var sessions = book.getSheets().filter(function (t) { return t.getName().indexOf(SESSION_PREFIX) === 0; });
+    sessions.sort(function (a, b) { return a.getName() < b.getName() ? -1 : 1; });
+    var last = book.getSheets().length;
+    for (var j = 0; j < sessions.length; j++) {
+      moveTab_(book, sessions[j], last - sessions.length + 1 + j);
+      if (sessions[j].getName() === current) { if (sessions[j].isSheetHidden()) sessions[j].showSheet(); }
+      else if (!sessions[j].isSheetHidden()) sessions[j].hideSheet();
+    }
+  } catch (err) {
+    console.error('gate: tidyTabs ' + err);
+  }
+}
+
+function moveTab_(book, tab, position) {
+  if (tab.getIndex() === position) return;
+  book.setActiveSheet(tab);
+  book.moveActiveSheet(position);
+}
+
+/** The menu item: tidy now, and say so. */
+function tidyTabs() {
+  tidyTabs_();
+  SpreadsheetApp.getUi().alert('Tabs tidied: main tabs first, session logs last, past months hidden.');
 }
 
 function json_(obj) {
@@ -600,6 +651,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Refresh the Who tab', 'refreshSummary')
     .addItem('Refused attempts (last 20)', 'showRefusals')
+    .addItem('Tidy tabs', 'tidyTabs')
     .addToUi();
 }
 
@@ -755,7 +807,7 @@ function refreshSummary() {
   });
 
   var tab = book.getSheetByName('Who');
-  if (!tab) tab = book.insertSheet('Who');
+  if (!tab) { tab = book.insertSheet('Who'); tidyTabs_(); }
   tab.clear();
   tab.appendRow(['name', 'sessions', 'last 30 days', 'games', 'first seen', 'last seen']);
   tab.setFrozenRows(1);
