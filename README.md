@@ -89,16 +89,19 @@ code-only, exactly as before.
 | Visitor | Result |
 |---|---|
 | Enters a code | Admitted; the pass is stored in the browser, as always |
-| Signs in with Google, **then** enters a code | Admitted, and the Google account is linked: a row in the sheet's `Google` tab with the email, the name, the code, the game they came through and the date |
-| Signs in with a linked Google account | Admitted with no code, on any device |
-| Signs in with an unlinked account | The door says "Signed in as …" and asks for the code once, which links it |
+| Signs in with an account the sheet has never seen | Recorded in the sheet's `Google` tab as `unauthenticated`, with the game whose door it was at and the date; the door says "Signed in as …" and asks for the code |
+| Signs in with Google, **then** enters a code | Admitted, and that row becomes `authenticated`, with the name and code filled in |
+| Signs in with an `authenticated` account | Admitted with no code, on any device |
+| Signs in with a `blocked` account | Turned away ("that access has been turned off"); a code still works on its own |
 
 Google's one-tap prompt also appears, so a returning visitor signed into
 Google is often let straight in. A pass holder who arrived by code can link an
 account later from **Link Google account** under the library's
-"Authenticated" badge. To turn one Google sign-in off, put anything in that
-row's `revoked` column; revoking the code itself turns off every Google
-account linked to it. The pass stored in the browser is the same however
+"Authenticated" badge. The `status` column is a dropdown the owner can
+change by hand: set an `unauthenticated` row to `authenticated` to let that
+account in without a code (it is admitted under the row's name, or its email
+if the name is empty), or set any row to `blocked`. Edits take effect at
+once. Revoking a code also turns off every Google account linked to it. The pass stored in the browser is the same however
 someone got in, so nothing in the games changes.
 
 ## One door, loaded by every game

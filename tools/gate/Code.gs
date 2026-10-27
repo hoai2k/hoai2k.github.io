@@ -15,9 +15,12 @@
  *       account to the code in the Google tab and answer `linked: email`.
  *
  *   { kind: 'google', game, credential }
- *       A Google sign-in. If the account is linked (Google tab) and its code
- *       is still live, answer {ok, id, name, email}; otherwise
- *       {ok:false, reason:'unlinked'} and the door asks for the code.
+ *       A Google sign-in. An `authenticated` account in the Google tab is
+ *       admitted: {ok, id, name, email}. One the tab has never seen is
+ *       recorded there as `unauthenticated`, with the game whose door it was
+ *       at, and answered {ok:false, reason:'unlinked'}, so the door asks for a
+ *       code; entering one turns that row `authenticated`. `blocked` is
+ *       turned away. The owner can set any row's status by hand.
  *
  *   { kind: 'link', game, id, credential }
  *       Someone already holding a pass links their Google account to it.
@@ -190,17 +193,15 @@ function handleInvite_(body) {
   // stale token never costs the friend their admission — the code was good.
   if (body.credential) {
     var who = verifyGoogle_(body.credential);
-    if (who) {
-      link_(who, found, code, game);
-      answer.linked = who.email;
-    }
+    if (who && link_(who, found, code, game)) answer.linked = who.email;
   }
   return answer;
 }
 
 /**
- * A Google sign-in at the door. Admits a linked account whose code is still
- * live; anything else is a polite "not yet", and the door asks for the code.
+ * A Google sign-in at the door. Admits an authenticated account; records one
+ * the tab has never seen as unauthenticated (the door then asks for a code);
+ * turns a blocked one away.
  */
 function handleGoogle_(body) {
   if (!GOOGLE_CLIENT_ID) return { ok: false, reason: 'google-off' };
@@ -209,17 +210,35 @@ function handleGoogle_(body) {
   if (!who) return { ok: false, reason: 'bad-token' };
 
   var row = googleLookup_(who.email);
-  if (!row) return { ok: false, reason: 'unlinked' };
-  var found = row.revoked ? null : lookupId_(row.id);
-  if (!found) {
-    refuse_(game, row.id, who.email, 'revoked (Google)', body.client);
+  if (!row) {
+    recordUnauthenticated_(who, game);
+    return { ok: false, reason: 'unlinked' };
+  }
+  if (row.status === 'unauthenticated') return { ok: false, reason: 'unlinked' };
+  if (row.status === 'blocked') {
+    refuse_(game, row.id, who.email, 'blocked (Google)', body.client);
     return { ok: false, reason: 'revoked' };
   }
 
+  // Authenticated. Linked through a code: that code must still be live, so
+  // revoking or deleting it turns its Google accounts off too. Authenticated
+  // by hand with no code: the row's name, or the email, is who they are.
+  var id, name, codeShown;
+  if (row.code) {
+    var found = lookup_(normalize_(row.code));
+    if (!found || found.revoked) {
+      refuse_(game, row.id, who.email, 'revoked (Google)', body.client);
+      return { ok: false, reason: 'revoked' };
+    }
+    id = found.id; name = found.name; codeShown = found.code;
+  } else {
+    id = row.id || who.email; name = id; codeShown = '(no code)';
+  }
+
   append_(SIGNIN_TAB, ['when', 'game', 'name', 'code', 'verdict'],
-          [new Date(), safe_(game, 60), safe_(found.name, 100), safe_(found.code, 60),
+          [new Date(), safe_(game, 60), safe_(name, 100), safe_(codeShown, 60),
            safe_('admitted via Google (' + who.email + ')', 200)]);
-  return { ok: true, id: found.id, name: found.name, email: who.email };
+  return { ok: true, id: id, name: name, email: who.email };
 }
 
 /** Someone already holding a pass links a Google account to it. */
@@ -231,7 +250,7 @@ function handleLink_(body) {
   // name a live code — a revoked or deleted one links nothing.
   var found = lookupId_(String(body.id || ''));
   if (!found) return { ok: false, reason: 'unknown' };
-  link_(who, found, found.code, String(body.game || ''));
+  if (!link_(who, found, found.code, String(body.game || ''))) return { ok: false, reason: 'revoked' };
   return { ok: true, id: found.id, name: found.name, linked: who.email };
 }
 
@@ -262,20 +281,75 @@ function verifyGoogle_(credential) {
 }
 
 /**
- * Write a link to the Google tab. One row per link; when an email appears
- * more than once, the newest row wins (see googleLookup_), so relinking to a
- * different code needs no editing.
+ * THE GOOGLE TAB. One row per Google account:
  *
- * Google tab columns: email | name | code | first game | linked | Google name | revoked
- * Anything in "revoked" turns that Google sign-in off without touching the code.
+ *   email | name | code | first game | linked | Google name | status
+ *
+ * `status` is a dropdown: `authenticated` (let in by Google sign-in alone),
+ * `unauthenticated` (signed in, never gave a code; the door asks for one) or
+ * `blocked` (Google sign-in turned away; a code still works on its own). An
+ * empty status reads as authenticated and anything else as blocked, so rows
+ * written before the column had a dropdown keep their meaning. "first game" is
+ * the door the account first turned up at.
+ */
+var GOOGLE_HEADER = ['email', 'name', 'code', 'first game', 'linked', 'Google name', 'status'];
+var GOOGLE_STATUSES = ['authenticated', 'unauthenticated', 'blocked'];
+var STATUS_COL = 7;
+
+function statusOf_(v) {
+  var s = String(v || '').trim().toLowerCase();
+  if (s === '' || s === 'authenticated') return 'authenticated';
+  if (s === 'unauthenticated') return 'unauthenticated';
+  return 'blocked';
+}
+
+/** The Google tab, created (or brought up to date) with its status dropdown. */
+function googleTab_() {
+  var book = book_();
+  var tab = book.getSheetByName(GOOGLE_TAB);
+  if (!tab) {
+    tab = book.insertSheet(GOOGLE_TAB);
+    tab.appendRow(GOOGLE_HEADER);
+    tab.setFrozenRows(1);
+  }
+  var head = tab.getRange(1, STATUS_COL);
+  if (String(head.getValue()) !== 'status' || !tab.getRange(2, STATUS_COL).getDataValidation()) {
+    // v3 called this column "revoked": same column, now a status.
+    head.setValue('status');
+    tab.getRange(2, STATUS_COL, Math.max(tab.getMaxRows() - 1, 1), 1).setDataValidation(
+      SpreadsheetApp.newDataValidation().requireValueInList(GOOGLE_STATUSES, true).setAllowInvalid(true).build());
+  }
+  return tab;
+}
+
+/** First sight of a Google account with no code: remember it, and where. */
+function recordUnauthenticated_(who, game) {
+  googleTab_().appendRow([safe_(who.email, 200), '', '', safe_(game, 60), new Date(),
+                          safe_(who.name, 100), 'unauthenticated']);
+  CacheService.getScriptCache().remove('google');
+}
+
+/**
+ * Link a Google account to a code that was just accepted. An unauthenticated
+ * row is filled in where it stands, keeping the game it first turned up at;
+ * an account with no row gets one. A blocked account is left blocked and
+ * nothing is linked. Returns whether it is linked.
  */
 function link_(who, found, code, game) {
   var existing = googleLookup_(who.email);
-  if (existing && !existing.revoked && existing.id === found.id) return;   // already linked
-  append_(GOOGLE_TAB, ['email', 'name', 'code', 'first game', 'linked', 'Google name', 'revoked'],
-          [safe_(who.email, 200), safe_(found.name, 100), safe_(code, 60), safe_(game, 60),
-           new Date(), safe_(who.name, 100), '']);
+  if (existing && existing.status === 'blocked') return false;
+  if (existing && existing.status === 'authenticated' && existing.id === found.id) return true;   // already linked
+  var tab = googleTab_();
+  var values = [safe_(who.email, 200), safe_(found.name, 100), safe_(code, 60),
+                safe_(existing && existing.game ? existing.game : game, 60), new Date(),
+                safe_(who.name, 100), 'authenticated'];
+  if (existing && existing.status === 'unauthenticated') {
+    tab.getRange(existing.row, 1, 1, values.length).setValues([values]);
+  } else {
+    tab.appendRow(values);
+  }
   CacheService.getScriptCache().remove('google');
+  return true;
 }
 
 /** The newest Google tab row for an email, cached like the code list. */
@@ -293,13 +367,27 @@ function googleLookup_(email) {
     for (var i = 0; i < rows.length; i++) {
       var e = String(rows[i][0] || '').trim().toLowerCase();
       if (!e) continue;
-      list.push({ email: e, id: String(rows[i][1] || '').trim(), revoked: String(rows[i][6] || '').trim() !== '' });
+      list.push({ email: e, id: String(rows[i][1] || '').trim(), code: String(rows[i][2] || '').trim(),
+                  game: String(rows[i][3] || '').trim(), status: statusOf_(rows[i][6]), row: i + 2 });
     }
     cache.put('google', JSON.stringify(list), CODES_TTL);
   }
   var found = null;
   for (var j = 0; j < list.length; j++) if (list[j].email === email) found = list[j];
   return found;
+}
+
+/**
+ * An edit by hand to the Codes or Google tab takes effect at once, instead of
+ * after the cache runs out. A simple trigger: it runs for the owner's own
+ * edits in the sheet and needs no setup.
+ */
+function onEdit(e) {
+  try {
+    var tab = e.range.getSheet().getName();
+    if (tab === CODES_TAB) CacheService.getScriptCache().remove('codes');
+    if (tab === GOOGLE_TAB) CacheService.getScriptCache().remove('google');
+  } catch (err) { /* nothing to clear */ }
 }
 
 /** The live (not revoked) code whose id is this one, or null. */

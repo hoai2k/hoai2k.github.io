@@ -56,8 +56,12 @@ across the loader copies is the check that they match `gate/loader.js`.
 `gate/Code.gs` verifies Google sign-in tokens with Google (`verifyGoogle_`,
 which calls `https://oauth2.googleapis.com/tokeninfo`), so the script needs
 the "connect to an external service" permission, granted once when the new
-version is deployed. Links are kept in a `Google` tab the script creates:
-`email | name | code | first game | linked | Google name | revoked`.
+version is deployed. Google accounts are kept in a `Google` tab the script creates:
+`email | name | code | first game | linked | Google name | status`, where
+`status` is a dropdown of `authenticated`, `unauthenticated` (signed in, no
+code yet) and `blocked`. An `onEdit` simple trigger clears the script's cache
+when the owner edits the `Codes` or `Google` tab, so a change by hand takes
+effect at once.
 `GOOGLE_CLIENT_ID` near the top of the script must match the one in
 `/gate/gate.js`; empty turns Google sign-in off here.
 
