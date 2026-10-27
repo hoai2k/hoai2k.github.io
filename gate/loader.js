@@ -88,6 +88,9 @@ export function openGate(opts) {
 function unreachable(opts) {
   return new Promise((resolve) => {
     const veil = document.createElement('div');
+    // The door's own class: pages that hide everything but the door while
+    // locked (the mini private sites) must still show this.
+    veil.className = 'gate-veil';
     veil.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;'
       + 'align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;'
       + 'background:#07090c;color:#e6ebf2;font:14px/1.5 system-ui,sans-serif';
