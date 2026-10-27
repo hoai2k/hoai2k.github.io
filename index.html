@@ -417,6 +417,22 @@
         color: inherit;
       }
 
+      .site-footer {
+        margin-top: 56px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+        font-size: 0.85rem;
+      }
+
+      .site-footer a {
+        color: var(--muted);
+      }
+
+      .site-footer a:hover,
+      .site-footer a:focus-visible {
+        color: var(--text);
+      }
+
       .empty.is-visible {
         display: block;
       }
@@ -696,6 +712,9 @@
         <h2 class="section-title" id="appsTitle">Apps</h2>
         <div class="grid" id="appGrid"></div>
       </section>
+      <footer class="site-footer">
+        <a href="privacy/">Privacy</a>
+      </footer>
     </main>
 
     <template id="gameCardTemplate">
