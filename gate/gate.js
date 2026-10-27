@@ -82,7 +82,16 @@
  */
 
 /** Where the guest list lives. Not a secret: it ships in this file either way. */
-const ENDPOINT = 'https://script.google.com/macros/s/AKfycbx5Jp9z8XG0nnk60z5zccDoIy8MdkFDr0Cn61p84fcqKyKzhZ_700c_zCJVqjwsNfvlsQ/exec';
+const DEFAULT_ENDPOINT = 'https://script.google.com/macros/s/AKfycbx5Jp9z8XG0nnk60z5zccDoIy8MdkFDr0Cn61p84fcqKyKzhZ_700c_zCJVqjwsNfvlsQ/exec';
+
+/**
+ * The guest list this page talks to: DEFAULT_ENDPOINT unless the host passed
+ * `opts.endpoint` (mando, which is built with its own, and its test suite).
+ */
+let endpoint = DEFAULT_ENDPOINT;
+
+/** Set by `opts.alwaysOn`: the host, not the hostname, decides the door is on. */
+let forcedOn = false;
 
 /**
  * The Google OAuth client ID (a Web application client in Google Cloud, with
@@ -139,6 +148,7 @@ function isLocal() {
 
 /** On for a real deployment; off locally unless deliberately being tested. */
 function gateEnabled() {
+  if (forcedOn) return true;
   try {
     if (new URL(location.href).searchParams.has('gatetest')) return true;
   } catch { /* an exotic URL is not worth failing a boot over */ }
@@ -181,7 +191,7 @@ export function clearPass() {
  * through.
  */
 async function post(body) {
-  const res = await fetch(ENDPOINT, {
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body),
@@ -272,9 +282,9 @@ function pingSession(pass, game) {
   const body = JSON.stringify({ kind: 'session', game, id: pass.id, name: pass.name });
   try {
     const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
-    if (navigator.sendBeacon(ENDPOINT, blob)) return;
+    if (navigator.sendBeacon(endpoint, blob)) return;
   } catch { /* fall through to fetch */ }
-  fetch(ENDPOINT, {
+  fetch(endpoint, {
     method: 'POST', keepalive: true,
     headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body,
   }).catch(() => { /* the log is never worth failing a boot over */ });
@@ -542,9 +552,17 @@ function buildDoor(opts) {
  * `true` — the file missing, a 404, bad JSON — keeps it locked, so a slip
  * never opens a prototype. See `followsPublicAccess`.
  *
- * @param {{title: string, blurb: string, game: string, dismissible?: boolean, ignorePublicAccess?: boolean, accessFile?: string, warm?: (signal: AbortSignal) => void}} opts
+ * `opts.endpoint` points this page at a different guest list, and
+ * `opts.alwaysOn` keeps the door up even on localhost. Both exist for a host
+ * that decides for itself whether it is gated — mando, which is gated exactly
+ * when its build was given an endpoint, and whose test suite runs the real
+ * door on a local server.
+ *
+ * @param {{title: string, blurb: string, game: string, dismissible?: boolean, ignorePublicAccess?: boolean, accessFile?: string, endpoint?: string, alwaysOn?: boolean, warm?: (signal: AbortSignal) => void}} opts
  */
 export function openGate(opts) {
+  if (typeof opts.endpoint === 'string' && opts.endpoint !== '') endpoint = opts.endpoint;
+  if (opts.alwaysOn) forcedOn = true;
   // A console escape hatch for the owner, always available: forget this
   // browser's pass and come back to the door. Handy when testing an invite,
   // and harmless — forgetting a pass cannot let anybody in.
