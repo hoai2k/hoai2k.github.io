@@ -51,11 +51,11 @@ var SHEET_ID = '';
 
 /**
  * The Google OAuth client ID the door signs people in with — the same value as
- * GOOGLE_CLIENT_ID in /gate/gate.js. Paste it between the quotes. Empty turns
+ * GOOGLE_CLIENT_ID in /gate/gate.js. Empty turns
  * Google sign-in off here: every Google request is answered 'google-off' and
  * codes work exactly as before.
  */
-var GOOGLE_CLIENT_ID = '';
+var GOOGLE_CLIENT_ID = '1069894258313-2r9kdv5i6682cro0pkaoliu7bdkv1lek.apps.googleusercontent.com';
 
 /** Tab names. Sessions get one tab per month; see sessionTab_(). */
 var CODES_TAB = 'Codes';
