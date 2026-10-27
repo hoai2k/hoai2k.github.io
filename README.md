@@ -166,31 +166,25 @@ Every repository under this account, and whether it touches the gate:
 
 | Repository | Uses the gate | How |
 |---|---|---|
-| [`hoai2k.github.io`](.) | **Yes — this is its home** | `gate/gate.js` (the canonical copy), `tools/gate/Code.gs`, `public-access.json` |
-| [`mando`](https://github.com/hoai2k/mando) | **Yes, gated** | `src/gate/gate.ts` — the same door as TypeScript, since it is a Vite build |
-| [`jjkbrawler`](https://github.com/hoai2k/jjkbrawler) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
-| [`battlebotarena`](https://github.com/hoai2k/battlebotarena) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
-| [`rounders`](https://github.com/hoai2k/rounders) | **Yes, gated** | `js/gate/gate.js` — byte-identical copy |
-| [`jujutsubattlegrounds`](https://github.com/hoai2k/jujutsubattlegrounds) | **Yes, gated** | `src/gate/gate.js`, and a second copy at `fable5.1/src/gate/gate.js` for its second build |
-| [`supergoatman`](https://github.com/hoai2k/supergoatman) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
-| [`tennis`](https://github.com/hoai2k/tennis) | **Yes, gated** | `src/gate/gate.js` — byte-identical copy |
+| [`hoai2k.github.io`](.) | **Yes — this is its home** | `gate/gate.js` (the shared door, served live), `gate/loader.js` (what games carry), `tools/gate/Code.gs`, `public-access.json` |
+| [`jjkbrawler`](https://github.com/hoai2k/jjkbrawler) | **Yes, loader** | `src/gate/gate.js` |
+| [`battlebotarena`](https://github.com/hoai2k/battlebotarena) | **Yes, loader** | `src/gate/gate.js` |
+| [`rounders`](https://github.com/hoai2k/rounders) | **Yes, loader** | `js/gate/gate.js` |
+| [`jujutsubattlegrounds`](https://github.com/hoai2k/jujutsubattlegrounds) | **Yes, loader** | `src/gate/gate.js` and `fable5.1/src/gate/gate.js` |
+| [`supergoatman`](https://github.com/hoai2k/supergoatman) | **Yes, loader** | `src/gate/gate.js` (Vite keeps the shared door's URL as an external import) |
+| [`tennis`](https://github.com/hoai2k/tennis) | **Yes, loader** | `src/gate/gate.js` (Vite, as above) |
+| [`mini`](https://github.com/hoai2k/mini) | **Yes, loader** | Six copies: `onemonster/`, `gliders/`, `bronzedrum/` and `icecreamcone/` under `game/src/gate/gate.js`, `bookzam/app/src/gate/gate.js`, and `sites/shared/gate.js` for the private sites. The Prototype archive games and the sites pass `ignorePublicAccess: true` with their own `public-access.json` as `accessFile`; the library shows the archive only to pass holders |
+| [`mando`](https://github.com/hoai2k/mando) | **Yes, its own door** | `src/gate/gate.ts` — the older door as TypeScript, switched on at build time by `VITE_GATE_ENDPOINT` and covered by `tools/test-gate.mjs`. Not on the shared door yet, so no Google sign-in there: moving it needs the shared door to accept an endpoint and a "switched on by the build" option, and that suite to load the shared door |
 | [`cambrian`](https://github.com/hoai2k/cambrian) | No — but reads the pass | `src/shared/feedback.ts` reads `gate.pass` from `localStorage`, unnamespaced, only to pre-fill a returning reporter's name on its feedback form. The game itself is not gated: nothing in it ever shows a door. |
-| [`mini`](https://github.com/hoai2k/mini) | **Yes, gated** | Five byte-identical copies: `onemonster/`, `gliders/`, `bronzedrum/` and `icecreamcone/` under `game/src/gate/gate.js`, and `sites/shared/gate.js` for the private sites. The Prototype archive games (One Monster, Gliders) and the sites pass `ignorePublicAccess: true` with their own `public-access.json` as `accessFile`; the library shows the archive only to pass holders |
 | `francis`, `mechmayhem`, `bloxverse`, `earth`, `mechbrawler`, `swingers`, `dinoblocks` | No | Checked directly (2026-09-26): no reference to the gate, the endpoint, or `gate.pass` in any of them. |
 
-**`ignorePublicAccess` and `accessFile` (October 2026)** were added to `gate/gate.js` and
-the `mini` copies only. The other repositories above still carry the copy
-from before it, which lacks options none of them uses, so they behave the
-same; bring each up to date (and `mando`'s `gate.ts`) the next time it is
-touched.
-
-**Eight copies of `gate.js`, one hash.** `md5sum` across all eight
-no-build/Vite copies (everything above except `mando`'s TypeScript version,
-which is the same design in a different language) is the actual check —
-they were identical the last time this table was true. If you add a game,
-add its row here in the same commit that adds the gate to it; if you ever
-find a row that has drifted from the file it describes, that is the bug to
-fix, not the table.
+**Every loader copy is byte-identical to `gate/loader.js`** (October 2026);
+`md5sum` across them is the check. Several of these games deploy from a
+`deploy` branch with deploys switched off, so their loader is on `main` but
+reaches the live site only when that game is next deployed; until then the
+live game shows the older door, which keeps working against the same guest
+list. If you add a game, add its row here in the same commit that adds the
+loader to it.
 
 ## Stats pages
 
