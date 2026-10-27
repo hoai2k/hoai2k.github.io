@@ -1,12 +1,25 @@
 /**
- * THE PORTABLE COPY OF THE DOOR — the reference implementation the other games
- * carry, kept here beside `Code.gs` so the whole gate lives in one place.
+ * THE SHARED DOOR — served live at https://games.hoai.net/gate/gate.js.
  *
- * This repository does not load this file: it is a Vite/TypeScript site and
- * uses `src/gate/gate.ts`, which is the same door in the same shape. The other
- * six games are no-build static sites and carry this one byte-identically.
- * IF YOU CHANGE ONE, CHANGE BOTH — they are two expressions of one design, and
- * the moment they disagree the games start disagreeing about who is let in.
+ * The library imports it directly, and every game that carries
+ * `gate/loader.js` (as its own `gate.js`) imports it from that URL at boot, so
+ * a change here reaches all of them on their next load (GitHub Pages caches it
+ * for up to ten minutes). Games that still carry an older full copy of this
+ * file keep the screen they shipped with until they switch to the loader.
+ *
+ * KEEP THE EXPORTS BACKWARDS COMPATIBLE. Every loader in every game calls
+ * `openGate(opts)` and `publicAccessOn()` on whatever this file is today, so
+ * renaming either, or changing what an existing option means, breaks games
+ * that were not redeployed. Add options; never repurpose them.
+ *
+ * GOOGLE SIGN-IN sits beside the code, and is off while GOOGLE_CLIENT_ID is
+ * empty. Signing in with Google before entering a code links that Google
+ * account to the code in the spreadsheet's `Google` tab; from then on,
+ * signing in with that account is enough, on any device. Signing in with an
+ * account that is not linked yet asks for the code. `linkGoogle()` links an
+ * account for someone who already holds a pass. The pass stored in the browser
+ * is the same either way, so every game behaves the same however a friend got
+ * in.
  *
  * ---
  *
@@ -72,6 +85,18 @@
 const ENDPOINT = 'https://script.google.com/macros/s/AKfycbx5Jp9z8XG0nnk60z5zccDoIy8MdkFDr0Cn61p84fcqKyKzhZ_700c_zCJVqjwsNfvlsQ/exec';
 
 /**
+ * The Google OAuth client ID (a Web application client in Google Cloud, with
+ * https://games.hoai.net as an authorised JavaScript origin). Not a secret: a
+ * client ID is public by design. Empty turns Google sign-in off everywhere and
+ * the door is code-only, exactly as before. The Apps Script's GOOGLE_CLIENT_ID
+ * must hold the same value, or it will refuse every Google sign-in.
+ */
+const GOOGLE_CLIENT_ID = '';
+
+/** Google's sign-in library (Google Identity Services). */
+const GIS_URL = 'https://accounts.google.com/gsi/client';
+
+/**
  * Deliberately not namespaced to any one game — see the header. Changing this
  * string in one game and not the others would quietly split the guest list into
  * per-game sign-ins, which is exactly what it exists to prevent.
@@ -130,7 +155,10 @@ export function readPass() {
     // A blob that predates a field, or one typed in by hand, should read as
     // "no pass" rather than crash the boot before the game exists.
     if (!p || typeof p.id !== 'string' || p.id === '') return null;
-    return { id: p.id, name: typeof p.name === 'string' ? p.name : p.id, since: p.since || Date.now() };
+    const pass = { id: p.id, name: typeof p.name === 'string' ? p.name : p.id, since: p.since || Date.now() };
+    // The Google account this pass is linked to, when this browser knows it.
+    if (typeof p.google === 'string' && p.google !== '') pass.google = p.google;
+    return pass;
   } catch {
     return null;   // private mode, or storage disabled entirely
   }
@@ -252,6 +280,147 @@ function pingSession(pass, game) {
   }).catch(() => { /* the log is never worth failing a boot over */ });
 }
 
+// ---------- Google sign-in ----------
+
+/** Whether the door offers Google sign-in at all. */
+export function googleEnabled() {
+  return GOOGLE_CLIENT_ID !== '';
+}
+
+let gisLoading = null;
+
+/** Load Google's sign-in library once. Rejects if it cannot be had. */
+function loadGis() {
+  if (!googleEnabled()) return Promise.reject(new Error('google sign-in is off'));
+  const ready = () => window.google && window.google.accounts && window.google.accounts.id;
+  if (ready()) return Promise.resolve(ready());
+  if (!gisLoading) {
+    gisLoading = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = GIS_URL;
+      script.async = true;
+      script.onload = () => (ready() ? resolve(ready()) : reject(new Error('gis missing')));
+      script.onerror = () => { gisLoading = null; reject(new Error('gis failed')); };
+      document.head.appendChild(script);
+    });
+  }
+  return gisLoading;
+}
+
+/**
+ * Draw Google's button into `box` and hand each sign-in's credential (a
+ * signed ID token) to `onCredential`. With `oneTap`, also ask Google's
+ * prompt, which signs a returning visitor straight in where the browser
+ * allows it. If the library cannot load — blocked, offline — the box is
+ * hidden and the code still works, which is the whole fallback.
+ */
+function mountGoogle(box, onCredential, { oneTap = false } = {}) {
+  return loadGis().then((gis) => {
+    gis.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: (r) => { if (r && r.credential) onCredential(r.credential); },
+      auto_select: true,
+      cancel_on_tap_outside: false,
+      use_fedcm_for_prompt: true,
+      itp_support: true,
+      context: 'signin',
+    });
+    box.replaceChildren();
+    box.hidden = false;
+    gis.renderButton(box, { type: 'standard', theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill' });
+    if (oneTap) gis.prompt();
+    return gis;
+  }).catch(() => { box.hidden = true; return null; });
+}
+
+/** Close Google's one-tap prompt if it is up. */
+function cancelGoogle() {
+  try { window.google?.accounts?.id?.cancel(); } catch { /* nothing to close */ }
+}
+
+/**
+ * The email inside a Google credential, for showing "signed in as" only.
+ * Read without checking the signature — the Apps Script verifies the token
+ * with Google before trusting anything in it.
+ */
+function emailOf(credential) {
+  try {
+    const part = credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const body = JSON.parse(decodeURIComponent(escape(atob(part))));
+    return typeof body.email === 'string' ? body.email : '';
+  } catch { return ''; }
+}
+
+/**
+ * Link the Google account a visitor signs in with to the pass this browser
+ * already holds, so they can get in on any device by signing in. For a page
+ * whose visitors are already through the door — the library's
+ * "Authenticated" badge. Resolves `{ ok, email }`; never rejects.
+ *
+ * @param {{game?: string}} [opts]
+ */
+export function linkGoogle(opts = {}) {
+  const pass = readPass();
+  if (!pass || !googleEnabled()) return Promise.resolve({ ok: false });
+  const game = opts.game || 'library';
+
+  return new Promise((resolve) => {
+    const door = buildDoor({
+      title: 'Link Google account',
+      blurb: 'Sign in with Google to tie it to your access. After that you can get in on any device just by signing in, with no code.',
+    });
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      cancelGoogle();
+      door.close();
+      resolve(result);
+    };
+
+    const cancel = document.createElement('button');
+    cancel.textContent = 'Cancel';
+    cancel.className = 'gate-back';
+    cancel.onclick = () => finish({ ok: false });
+    door.slot.append(cancel);
+
+    mountGoogle(door.google, async (credential) => {
+      door.note.className = 'gate-note';
+      door.note.textContent = 'Linking ' + (emailOf(credential) || 'your account') + '…';
+      try {
+        const r = await post({ kind: 'link', game, id: pass.id, name: pass.name, credential });
+        if (r && r.ok && typeof r.linked === 'string') {
+          writePass({ ...pass, google: r.linked });
+          door.google.hidden = true;
+          door.note.textContent = 'Linked to ' + r.linked + '. Signing in with it now gets you in anywhere.';
+          cancel.textContent = 'Done';
+          setTimeout(() => finish({ ok: true, email: r.linked }), 2500);
+          return;
+        }
+        door.note.className = 'gate-note gate-bad';
+        door.note.textContent = googleRefusal(r && r.reason, 'link');
+      } catch {
+        door.note.className = 'gate-note gate-bad';
+        door.note.textContent = 'Could not reach the guest list just now. Try again in a moment.';
+      }
+    }).then((gis) => {
+      if (!gis) {
+        door.note.className = 'gate-note gate-bad';
+        door.note.textContent = "Google sign-in couldn't load here. Check that it isn't blocked, then try again.";
+      }
+    });
+  });
+}
+
+/** What to say when the guest list turns a Google sign-in away. */
+function googleRefusal(reason, during) {
+  if (reason === 'revoked') return 'That access has been turned off. Ask for a new invite.';
+  if (reason === 'google-off' || reason === 'unknown-kind') return "Google sign-in isn't switched on yet. Use your invite code.";
+  if (reason === 'bad-token') return "Google couldn't confirm that sign-in. Try again.";
+  if (during === 'link' && reason === 'unknown') return "This browser's access isn't on the guest list any more, so it can't be linked.";
+  return 'That sign-in was not accepted. Try again, or use your invite code.';
+}
+
 // ---------- the invite in the address bar ----------
 
 function codeFromUrl() {
@@ -314,6 +483,11 @@ const CSS = `
 .gate-veil button:disabled { opacity: 0.5; cursor: default; }
 .gate-veil .gate-back { background: transparent; border-color: transparent; opacity: 0.65; }
 .gate-veil .gate-back:hover { background: transparent; opacity: 1; text-decoration: underline; }
+.gate-veil .gate-google { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 44px; }
+.gate-veil .gate-google[hidden] { display: none; }
+.gate-veil .gate-or { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #71808f; }
+.gate-veil .gate-who { font-size: 13px; color: #c9d6e4; }
+.gate-veil .gate-who button { padding: 2px 6px; font-size: 12px; margin-left: 6px; }
 .gate-veil .gate-note { font-size: 12px; color: #71808f; max-width: 26rem; min-height: 1.2em; }
 .gate-veil .gate-bad { color: #ff9a7a; }
 `;
@@ -327,7 +501,7 @@ function buildDoor(opts) {
   veil.className = 'gate-veil';
   // textContent for the host-supplied strings: they are configuration, and
   // configuration should not be able to inject markup into the page.
-  veil.innerHTML = '<h1></h1><p class="gate-blurb"></p><div class="gate-slot"></div><p class="gate-note"></p>';
+  veil.innerHTML = '<h1></h1><p class="gate-blurb"></p><div class="gate-slot"></div><div class="gate-google" hidden></div><p class="gate-note"></p>';
   veil.querySelector('h1').textContent = opts.title;
   veil.querySelector('.gate-blurb').textContent = opts.blurb;
   document.body.appendChild(veil);
@@ -335,6 +509,7 @@ function buildDoor(opts) {
   return {
     veil,
     slot: veil.querySelector('.gate-slot'),
+    google: veil.querySelector('.gate-google'),
     note: veil.querySelector('.gate-note'),
     close() { veil.remove(); style.remove(); },
   };
@@ -428,10 +603,13 @@ export function openGate(opts) {
     function openDoor() {
       const door = buildDoor(opts);
       let settled = false;
+      // The Google sign-in waiting for a code to link to, if any.
+      const google = { credential: null };
 
       const admit = (p) => {
         if (settled) return;
         settled = true;
+        cancelGoogle();
         writePass(p);
         pingSession(p, opts.game);
         stripGateParams(INVITE_PARAM, RESET_PARAM);
@@ -452,7 +630,7 @@ export function openGate(opts) {
       const submit = () => {
         const code = input.value.trim();
         if (code === '') { input.focus(); return; }
-        redeem(code, { door, opts, admit, warming, input, go });
+        redeem(code, { door, opts, admit, warming, input, go, google });
       };
       go.onclick = submit;
       input.onkeydown = (e) => { if (e.key === 'Enter') submit(); };
@@ -465,6 +643,7 @@ export function openGate(opts) {
           if (settled) return;
           settled = true;
           warming.abort();
+          cancelGoogle();
           door.close();
           resolve();          // resolved WITHOUT a pass — see GateOptions.dismissible
         };
@@ -476,24 +655,96 @@ export function openGate(opts) {
         // An invite link spends itself. The form stays underneath so a bad code
         // lands somewhere the visitor can correct it.
         input.value = fromLink;
-        redeem(fromLink, { door, opts, admit, warming, input, go });
+        redeem(fromLink, { door, opts, admit, warming, input, go, google });
       } else {
         input.focus();
+      }
+
+      if (googleEnabled()) offerGoogle();
+
+      /**
+       * Google's button under the code box, and its one-tap prompt. A linked
+       * account is let straight in; an unlinked one is held here until a code
+       * is entered, and the code then links it.
+       */
+      function offerGoogle() {
+        const or = document.createElement('span');
+        or.className = 'gate-or';
+        or.textContent = 'or';
+        const button = document.createElement('div');
+        // In the page (still hidden) before Google draws into it.
+        door.google.replaceChildren(or, button);
+        mountGoogle(button, signedIn, { oneTap: !fromLink }).then((gis) => {
+          if (gis) door.google.hidden = false;
+        });
+      }
+
+      async function signedIn(credential) {
+        if (settled) return;
+        const email = emailOf(credential);
+        door.note.className = 'gate-note';
+        door.note.textContent = 'Checking ' + (email || 'your Google account') + '…';
+        try {
+          const r = await post({ kind: 'google', game: opts.game, credential, client: clientInfo() });
+          if (r && r.ok && typeof r.id === 'string' && r.id !== '') {
+            admit({ id: r.id, name: r.name || r.id, since: Date.now(), google: r.email || email });
+            return;
+          }
+          if (r && r.reason === 'unlinked') {
+            // Hold the sign-in; the code links it.
+            google.credential = credential;
+            showSignedIn(email);
+            door.note.className = 'gate-note';
+            door.note.textContent = 'Enter your invite code once to link this Google account. After that, signing in is enough.';
+            input.focus();
+            return;
+          }
+          door.note.className = 'gate-note gate-bad';
+          door.note.textContent = googleRefusal(r && r.reason, 'door');
+        } catch {
+          door.note.className = 'gate-note gate-bad';
+          door.note.textContent = 'Could not reach the guest list just now. Try again in a moment.';
+        }
+      }
+
+      /** Swap the button for "Signed in as …", with a way to change account. */
+      function showSignedIn(email) {
+        const who = document.createElement('span');
+        who.className = 'gate-who';
+        who.textContent = 'Signed in as ' + (email || 'your Google account');
+        const change = document.createElement('button');
+        change.className = 'gate-back';
+        change.textContent = 'Not you?';
+        change.onclick = () => {
+          google.credential = null;
+          door.note.textContent = '';
+          try { window.google?.accounts?.id?.disableAutoSelect(); } catch { /* fine */ }
+          offerGoogle();
+        };
+        who.append(change);
+        door.google.replaceChildren(who);
+        door.google.hidden = false;
       }
     }
   });
 }
 
 async function redeem(code, ctx) {
-  const { door, opts, admit, warming, input, go } = ctx;
+  const { door, opts, admit, warming, input, go, google } = ctx;
   const busy = (on) => { input.disabled = on; go.disabled = on; };
   busy(true);
   door.note.className = 'gate-note';
   door.note.textContent = 'Checking your invite…';
   try {
-    const r = await post({ kind: 'invite', game: opts.game, code, client: clientInfo() });
+    const body = { kind: 'invite', game: opts.game, code, client: clientInfo() };
+    // A Google sign-in held from earlier rides along, and the guest list links
+    // it to this code. A guest list that predates Google ignores it.
+    if (google && google.credential) body.credential = google.credential;
+    const r = await post(body);
     if (r && r.ok && typeof r.id === 'string' && r.id !== '') {
-      admit({ id: r.id, name: r.name || r.id, since: Date.now() });
+      const pass = { id: r.id, name: r.name || r.id, since: Date.now() };
+      if (typeof r.linked === 'string' && r.linked !== '') pass.google = r.linked;
+      admit(pass);
       return;
     }
     // A definite no. Stop pulling down a game this visitor will not play.

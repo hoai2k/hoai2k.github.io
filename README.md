@@ -78,6 +78,46 @@ local runs and test tooling never meet it. `?gatetest=1` switches it on for
 that page. Without it, an invite cannot be redeemed locally either — the door
 that would spend it never opens.
 
+## Google sign-in — a second way through the same door
+
+Wherever the door appears, a "Sign in with Google" button sits under the code
+box. It is **off until a Google OAuth client ID is set** — `GOOGLE_CLIENT_ID`
+in [`gate/gate.js`](gate/gate.js) and the same value in
+[`tools/gate/Code.gs`](tools/gate/Code.gs); while either is empty the door is
+code-only, exactly as before.
+
+| Visitor | Result |
+|---|---|
+| Enters a code | Admitted; the pass is stored in the browser, as always |
+| Signs in with Google, **then** enters a code | Admitted, and the Google account is linked: a row in the sheet's `Google` tab with the email, the name, the code, the game they came through and the date |
+| Signs in with a linked Google account | Admitted with no code, on any device |
+| Signs in with an unlinked account | The door says "Signed in as …" and asks for the code once, which links it |
+
+Google's one-tap prompt also appears, so a returning visitor signed into
+Google is often let straight in. A pass holder who arrived by code can link an
+account later from **Link Google account** under the library's
+"Authenticated" badge. To turn one Google sign-in off, put anything in that
+row's `revoked` column; revoking the code itself turns off every Google
+account linked to it. The pass stored in the browser is the same however
+someone got in, so nothing in the games changes.
+
+## One door, loaded by every game
+
+The door lives once, at [`gate/gate.js`](gate/gate.js), served at
+`https://games.hoai.net/gate/gate.js`. A game carries
+[`gate/loader.js`](gate/loader.js), copied byte for byte as its own
+`gate.js`; the loader fetches the shared door at boot, so a change here reaches
+every game on its next load (GitHub Pages caches it for up to ten minutes)
+without redeploying any of them. A friend with a stored pass is let in without
+waiting on that fetch, and if the shared door cannot be fetched at all, a
+visitor with no pass gets a "try again" screen rather than the game.
+
+A game that still carries an older full copy of the door keeps working and
+shows the screen it shipped with, without Google sign-in, until its copy is
+swapped for the loader. **Keep `gate/gate.js`'s exports backwards
+compatible**: every loader calls `openGate(opts)` and `publicAccessOn()` on
+whatever is live.
+
 ## Public access — one file, no code required
 
 There is a fourth way through the door, and it has no URL parameter and no

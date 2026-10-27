@@ -38,17 +38,28 @@ deployment would publish the gate's URL in every bundle, let one bug in the
 feedback path reach the codes, and let a flood of feedback burn the daily quota
 the front door of every game depends on.
 
-## `gate.js` is copied, not imported
+## One shared door, and the loader the games carry
 
-[`/gate/gate.js`](../gate/gate.js) is the canonical copy — this library's own
-runtime dependency, not a reference sitting idle under `/tools/`. Six games
-carry a byte-identical copy of it, because they are no-build static sites with
-nowhere to import from. `mando` carries the same door as TypeScript
-(`src/gate/gate.ts`) because it is a Vite site.
+[`/gate/gate.js`](../gate/gate.js) is the door, served live at
+`https://games.hoai.net/gate/gate.js`: this library imports it directly, and
+games carry [`/gate/loader.js`](../gate/loader.js) as their own `gate.js`,
+which imports the live door at boot. Changing the door is one commit here.
 
-**Change one and change all of them**, or the games start disagreeing about who
-is let in. `md5sum` across the copies is the check; they were identical when
-this was written.
+Games not yet switched to the loader still carry an older full copy (and
+`mando` the TypeScript version, `src/gate/gate.ts`). They keep working against
+this script — it answers the old door's requests exactly as before — and show
+the old screen, without Google sign-in, until they are switched. `md5sum`
+across the loader copies is the check that they match `gate/loader.js`.
+
+## Google sign-in
+
+`gate/Code.gs` verifies Google sign-in tokens with Google (`verifyGoogle_`,
+which calls `https://oauth2.googleapis.com/tokeninfo`), so the script needs
+the "connect to an external service" permission, granted once when the new
+version is deployed. Links are kept in a `Google` tab the script creates:
+`email | name | code | first game | linked | Google name | revoked`.
+`GOOGLE_CLIENT_ID` near the top of the script must match the one in
+`/gate/gate.js`; empty turns Google sign-in off here.
 
 ## One difference from what is deployed today
 

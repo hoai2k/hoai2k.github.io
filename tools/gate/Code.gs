@@ -1,26 +1,38 @@
 /**
- * The guest list and the log, as a Google Apps Script web app. v2
+ * The guest list and the log, as a Google Apps Script web app. v3
  *
  * This is not part of the build. It is pasted into the Apps Script project
  * bound to one Google Sheet and deployed as a web app; the deployment URL
  * becomes the GATE_ENDPOINT the games are built with. Setup is in
  * `mando/docs/AUTH.md`; this file is the canonical copy — see ../README.md.
  *
- * It answers two kinds of POST from the door (`gate.js` beside this file, and
- * `mando/src/gate/gate.ts`, which are the same door in two languages):
+ * It answers these POSTs from the door (`/gate/gate.js` in the library repo,
+ * and the older full copies some games still carry):
  *
- *   { kind: 'invite', game, code }
+ *   { kind: 'invite', game, code, credential? }
  *       Look the code up in the Codes tab, log the attempt, and answer
- *       {ok, id, name}. This is the only call that decides anything.
+ *       {ok, id, name}. With a Google credential, also link that Google
+ *       account to the code in the Google tab and answer `linked: email`.
+ *
+ *   { kind: 'google', game, credential }
+ *       A Google sign-in. If the account is linked (Google tab) and its code
+ *       is still live, answer {ok, id, name, email}; otherwise
+ *       {ok:false, reason:'unlinked'} and the door asks for the code.
+ *
+ *   { kind: 'link', game, id, credential }
+ *       Someone already holding a pass links their Google account to it.
  *
  *   { kind: 'session', game, id, name }
  *       A friend who already holds a pass opened a game. Appended to the
  *       month's session tab and nothing more.
  *
- * NOTE ON PERMISSIONS: this script touches your spreadsheet and nothing else.
- * An earlier version verified Google sign-in tokens and so needed
- * UrlFetchApp — the permission that makes the authorisation prompt read
- * alarmingly. Invite codes need no outside call at all, so that scope is gone.
+ * Older doors only ever send 'invite' (without a credential) and 'session',
+ * and get exactly the answers they always did.
+ *
+ * NOTE ON PERMISSIONS: Google sign-in needs UrlFetchApp, to ask Google whether
+ * a sign-in token is genuine (see verifyGoogle_). That is why the authorisation
+ * prompt asks to "connect to an external service". The only address it calls
+ * is Google's own token check.
  *
  * WHY THE BODY ARRIVES AS text/plain: a JSON content-type would make the
  * browser send a CORS preflight, and an Apps Script web app has no way to
@@ -37,8 +49,17 @@
 /** The spreadsheet this writes to. Leave '' to use the bound sheet. */
 var SHEET_ID = '';
 
+/**
+ * The Google OAuth client ID the door signs people in with — the same value as
+ * GOOGLE_CLIENT_ID in /gate/gate.js. Paste it between the quotes. Empty turns
+ * Google sign-in off here: every Google request is answered 'google-off' and
+ * codes work exactly as before.
+ */
+var GOOGLE_CLIENT_ID = '';
+
 /** Tab names. Sessions get one tab per month; see sessionTab_(). */
 var CODES_TAB = 'Codes';
+var GOOGLE_TAB = 'Google';
 var SIGNIN_TAB = 'Signins';
 var REFUSED_TAB = 'Refused';
 var SESSION_PREFIX = 'Sessions ';
@@ -116,6 +137,8 @@ function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
     if (body.kind === 'invite') return json_(handleInvite_(body));
+    if (body.kind === 'google') return json_(handleGoogle_(body));
+    if (body.kind === 'link') return json_(handleLink_(body));
     if (body.kind === 'session') { handleSession_(body); return json_({ ok: true }); }
     return json_({ ok: false, reason: 'unknown-kind' });
   } catch (err) {
@@ -161,7 +184,132 @@ function handleInvite_(body) {
           [new Date(), safe_(game, 60), safe_(found.name, 100), safe_(code, 60), 'admitted']);
   // The id, not the code, is what the browser keeps — so a stored pass carries
   // no secret that could be read out of localStorage and passed on.
-  return { ok: true, id: found.id, name: found.name };
+  var answer = { ok: true, id: found.id, name: found.name };
+
+  // Signed in with Google before entering the code: link the two. A bad or
+  // stale token never costs the friend their admission — the code was good.
+  if (body.credential) {
+    var who = verifyGoogle_(body.credential);
+    if (who) {
+      link_(who, found, code, game);
+      answer.linked = who.email;
+    }
+  }
+  return answer;
+}
+
+/**
+ * A Google sign-in at the door. Admits a linked account whose code is still
+ * live; anything else is a polite "not yet", and the door asks for the code.
+ */
+function handleGoogle_(body) {
+  if (!GOOGLE_CLIENT_ID) return { ok: false, reason: 'google-off' };
+  var game = String(body.game || '');
+  var who = verifyGoogle_(body.credential);
+  if (!who) return { ok: false, reason: 'bad-token' };
+
+  var row = googleLookup_(who.email);
+  if (!row) return { ok: false, reason: 'unlinked' };
+  var found = row.revoked ? null : lookupId_(row.id);
+  if (!found) {
+    refuse_(game, row.id, who.email, 'revoked (Google)', body.client);
+    return { ok: false, reason: 'revoked' };
+  }
+
+  append_(SIGNIN_TAB, ['when', 'game', 'name', 'code', 'verdict'],
+          [new Date(), safe_(game, 60), safe_(found.name, 100), safe_(found.code, 60),
+           safe_('admitted via Google (' + who.email + ')', 200)]);
+  return { ok: true, id: found.id, name: found.name, email: who.email };
+}
+
+/** Someone already holding a pass links a Google account to it. */
+function handleLink_(body) {
+  if (!GOOGLE_CLIENT_ID) return { ok: false, reason: 'google-off' };
+  var who = verifyGoogle_(body.credential);
+  if (!who) return { ok: false, reason: 'bad-token' };
+  // The pass is only an id from the visitor's own browser, so it must still
+  // name a live code — a revoked or deleted one links nothing.
+  var found = lookupId_(String(body.id || ''));
+  if (!found) return { ok: false, reason: 'unknown' };
+  link_(who, found, found.code, String(body.game || ''));
+  return { ok: true, id: found.id, name: found.name, linked: who.email };
+}
+
+/**
+ * Ask Google whether a sign-in token is genuine, and for whom.
+ *
+ * Google's tokeninfo endpoint checks the signature and expiry; this checks the
+ * token was issued to OUR client ID (a token minted for some other site must
+ * not open this door) and that Google has verified the email. Returns
+ * {email, name} or null.
+ */
+function verifyGoogle_(credential) {
+  if (!GOOGLE_CLIENT_ID || !credential) return null;
+  try {
+    var res = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' +
+                                encodeURIComponent(String(credential)), { muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) return null;
+    var t = JSON.parse(res.getContentText());
+    if (t.aud !== GOOGLE_CLIENT_ID) return null;
+    if (t.iss !== 'accounts.google.com' && t.iss !== 'https://accounts.google.com') return null;
+    if (String(t.email_verified) !== 'true' || !t.email) return null;
+    if (Number(t.exp) * 1000 < Date.now()) return null;
+    return { email: String(t.email).toLowerCase(), name: String(t.name || '') };
+  } catch (err) {
+    console.error('gate: tokeninfo ' + err);
+    return null;
+  }
+}
+
+/**
+ * Write a link to the Google tab. One row per link; when an email appears
+ * more than once, the newest row wins (see googleLookup_), so relinking to a
+ * different code needs no editing.
+ *
+ * Google tab columns: email | name | code | first game | linked | Google name | revoked
+ * Anything in "revoked" turns that Google sign-in off without touching the code.
+ */
+function link_(who, found, code, game) {
+  var existing = googleLookup_(who.email);
+  if (existing && !existing.revoked && existing.id === found.id) return;   // already linked
+  append_(GOOGLE_TAB, ['email', 'name', 'code', 'first game', 'linked', 'Google name', 'revoked'],
+          [safe_(who.email, 200), safe_(found.name, 100), safe_(code, 60), safe_(game, 60),
+           new Date(), safe_(who.name, 100), '']);
+  CacheService.getScriptCache().remove('google');
+}
+
+/** The newest Google tab row for an email, cached like the code list. */
+function googleLookup_(email) {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get('google');
+  var list;
+  if (hit) {
+    list = JSON.parse(hit);
+  } else {
+    var tab = book_().getSheetByName(GOOGLE_TAB);
+    var last = tab ? tab.getLastRow() : 0;
+    var rows = last > 1 ? tab.getRange(2, 1, last - 1, 7).getValues() : [];
+    list = [];
+    for (var i = 0; i < rows.length; i++) {
+      var e = String(rows[i][0] || '').trim().toLowerCase();
+      if (!e) continue;
+      list.push({ email: e, id: String(rows[i][1] || '').trim(), revoked: String(rows[i][6] || '').trim() !== '' });
+    }
+    cache.put('google', JSON.stringify(list), CODES_TTL);
+  }
+  var found = null;
+  for (var j = 0; j < list.length; j++) if (list[j].email === email) found = list[j];
+  return found;
+}
+
+/** The live (not revoked) code whose id is this one, or null. */
+function lookupId_(id) {
+  if (!id) return null;
+  var list = codeList_();
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].id === id && !list[i].revoked) return list[i];
+  }
+  return null;
 }
 
 /**
@@ -252,6 +400,13 @@ function sessionTab_() {
  * without deleting the row, so the history in Signins still means something.
  */
 function lookup_(code) {
+  var list = codeList_();
+  for (var j = 0; j < list.length; j++) if (list[j].code === code) return list[j];
+  return null;
+}
+
+/** The whole Codes tab as {code, id, name, revoked}, cached. */
+function codeList_() {
   var cache = CacheService.getScriptCache();
   var hit = cache.get('codes');
   var list;
@@ -259,7 +414,7 @@ function lookup_(code) {
     list = JSON.parse(hit);
   } else {
     var tab = book_().getSheetByName(CODES_TAB);
-    if (!tab) return null;   // no list means nobody is on it — fail closed
+    if (!tab) return [];   // no list means nobody is on it — fail closed
     var last = tab.getLastRow();
     var rows = last < 1 ? [] : tab.getRange(1, 1, last, 3).getValues();
     list = [];
@@ -272,8 +427,7 @@ function lookup_(code) {
     }
     cache.put('codes', JSON.stringify(list), CODES_TTL);
   }
-  for (var j = 0; j < list.length; j++) if (list[j].code === code) return list[j];
-  return null;
+  return list;
 }
 
 /**

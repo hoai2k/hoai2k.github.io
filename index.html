@@ -400,6 +400,23 @@
         width: 5px;
       }
 
+      /* "Link Google account", a quiet line under the badge. */
+      .auth-slot .auth-link {
+        border: 0;
+        color: var(--muted);
+        display: block;
+        font-size: 0.85rem;
+        margin-top: 6px;
+        padding: 0;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .auth-slot .auth-link:hover,
+      .auth-slot .auth-link:focus-visible {
+        color: inherit;
+      }
+
       .empty.is-visible {
         display: block;
       }
@@ -1029,6 +1046,7 @@
           badge.className = "auth-badge";
           badge.textContent = "Authenticated";
           authSlot.append(badge);
+          offerGoogleLink();
           return;
         }
         const button = document.createElement("button");
@@ -1036,6 +1054,30 @@
         button.textContent = "Authenticate";
         button.addEventListener("click", authenticate);
         authSlot.append(button);
+      }
+
+      /**
+       * Under the badge, for a pass holder whose pass is not tied to a Google
+       * account yet: link one, so a new device needs only a Google sign-in.
+       * Only when the door has Google sign-in switched on, and never for a
+       * visitor let in by the public-access switch alone (no pass to link).
+       */
+      async function offerGoogleLink() {
+        if (!hasPass()) return;
+        let gate;
+        try { gate = await import("./gate/gate.js"); } catch { return; }
+        if (!gate.googleEnabled || !gate.googleEnabled()) return;
+        const pass = gate.readPass();
+        if (!pass || pass.google) return;
+        const link = document.createElement("button");
+        link.type = "button";
+        link.className = "auth-link";
+        link.textContent = "Link Google account";
+        link.addEventListener("click", async () => {
+          const result = await gate.linkGoogle({ game: "library" });
+          if (result && result.ok) link.remove();
+        });
+        authSlot.append(link);
       }
 
       function renderCard(game) {
