@@ -64,7 +64,8 @@ when the owner edits the `Codes` or `Google` tab, so a change by hand takes
 effect at once.
 
 The script keeps the tabs in order: `Codes`, `Google`, `Who`, `Signins`,
-`Refused`, then the monthly `Sessions` logs, oldest to newest, with every month
+`Refused`, then the monthly `Sessions` logs, newest to oldest (the oldest
+furthest right), with every month
 but the current one hidden (still read by the Who summary; shown again from the
 "All sheets" list at the bottom left). It tidies whenever it creates a tab, and
 on demand from **Invites → Tidy tabs**. The log tabs (`Sessions …`, `Signins`,

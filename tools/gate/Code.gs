@@ -587,7 +587,8 @@ function append_(tabName, header, row) {
 
 /**
  * THE TAB ORDER. The tabs the owner works in come first, in this order; the
- * monthly session logs go last, oldest to newest, with every month but the
+ * monthly session logs go after them, newest to oldest — the current month
+ * next to the main tabs, the oldest furthest right — with every month but the
  * current one hidden. Hidden tabs are still read (refreshSummary uses them
  * all) and can be shown from the "All sheets" list at the bottom left.
  */
@@ -610,7 +611,8 @@ function tidyTabs_() {
     }
     var current = sessionTab_();
     var sessions = book.getSheets().filter(function (t) { return t.getName().indexOf(SESSION_PREFIX) === 0; });
-    sessions.sort(function (a, b) { return a.getName() < b.getName() ? -1 : 1; });
+    // Newest first: "Sessions 2026-10" sorts after "Sessions 2026-09" as text.
+    sessions.sort(function (a, b) { return a.getName() < b.getName() ? 1 : -1; });
     var last = book.getSheets().length;
     for (var j = 0; j < sessions.length; j++) {
       moveTab_(book, sessions[j], last - sessions.length + 1 + j);
