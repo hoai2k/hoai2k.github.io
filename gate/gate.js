@@ -91,7 +91,7 @@ const ENDPOINT = 'https://script.google.com/macros/s/AKfycbx5Jp9z8XG0nnk60z5zccD
  * the door is code-only, exactly as before. The Apps Script's GOOGLE_CLIENT_ID
  * must hold the same value, or it will refuse every Google sign-in.
  */
-const GOOGLE_CLIENT_ID = '';
+const GOOGLE_CLIENT_ID = '1069894258313-2r9kdv5i6682cro0pkaoliu7bdkv1lek.apps.googleusercontent.com';
 
 /** Google's sign-in library (Google Identity Services). */
 const GIS_URL = 'https://accounts.google.com/gsi/client';
