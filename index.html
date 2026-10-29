@@ -231,58 +231,24 @@
         filter: saturate(1.08) contrast(1.04);
       }
 
-      /* "Controller recommended", on the picture of a game best played with a
-         pad. Above the picture's bottom shade, so it reads on any art. */
-      .controller-badge {
-        position: absolute;
-        left: 10px;
-        bottom: 10px;
-        z-index: 1;
-        display: inline-flex;
+      /* "Controller recommended", a line under the description of a game
+         best played with a pad. */
+      .controller-note {
+        display: flex;
         align-items: center;
         gap: 6px;
-        padding: 4px 10px 4px 8px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 999px;
-        background: rgba(8, 9, 13, 0.72);
-        backdrop-filter: blur(6px);
+        margin: 8px 0 0;
         color: var(--text);
-        font-size: 0.74rem;
+        font-size: 0.82rem;
         font-weight: 700;
-        letter-spacing: 0.02em;
-        pointer-events: none;
+        letter-spacing: 0.01em;
       }
 
-      .controller-badge svg {
-        width: 1.25em;
-        height: 1.25em;
+      .controller-note svg {
+        flex: none;
+        width: 1.3em;
+        height: 1.3em;
         color: var(--lime);
-      }
-
-      .controller-badge {
-        white-space: nowrap;
-      }
-
-      .controller-badge .short {
-        display: none;
-      }
-
-      /* The narrow side-picture of the phone layout: one word. */
-      @media (max-width: 430px) and (min-width: 341px) {
-        .controller-badge {
-          left: 6px;
-          bottom: 6px;
-          padding: 3px 8px 3px 6px;
-          font-size: 0.7rem;
-        }
-
-        .controller-badge .long {
-          display: none;
-        }
-
-        .controller-badge .short {
-          display: inline;
-        }
       }
 
       .thumb::after {
@@ -1208,10 +1174,10 @@
         }
 
         if (game.controller) {
-          const badge = document.createElement("span");
-          badge.className = "controller-badge";
-          badge.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 6h10a5 5 0 0 1 4.9 6l-1 4.6a2.6 2.6 0 0 1-4.5 1.2L14.6 16H9.4l-1.8 1.8a2.6 2.6 0 0 1-4.5-1.2l-1-4.6A5 5 0 0 1 7 6zm0 3v1.5H5.5v1.5H7v1.5h1.5V12H10v-1.5H8.5V9H7zm9.5.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm2 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg><span class="long">Controller recommended</span><span class="short">Controller</span>';
-          thumb.append(badge);
+          const note = document.createElement("p");
+          note.className = "controller-note";
+          note.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 6h10a5 5 0 0 1 4.9 6l-1 4.6a2.6 2.6 0 0 1-4.5 1.2L14.6 16H9.4l-1.8 1.8a2.6 2.6 0 0 1-4.5-1.2l-1-4.6A5 5 0 0 1 7 6zm0 3v1.5H5.5v1.5H7v1.5h1.5V12H10v-1.5H8.5V9H7zm9.5.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm2 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg><span>Controller recommended</span>';
+          card.querySelector(".description").after(note);
         }
 
         (game.tags || ["Game"]).slice(0, 3).forEach((tag) => {
