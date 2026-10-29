@@ -184,10 +184,11 @@ function handleInvite_(body) {
   }
 
   append_(SIGNIN_TAB, ['when', 'game', 'name', 'code', 'verdict'],
-          [new Date(), safe_(game, 60), safe_(found.name, 100), safe_(code, 60), 'admitted']);
+          [new Date(), safe_(game, 60), safe_(found.name, 100), safe_(code, 60),
+           found.scope ? 'admitted (public games only)' : 'admitted']);
   // The id, not the code, is what the browser keeps — so a stored pass carries
   // no secret that could be read out of localStorage and passed on.
-  var answer = { ok: true, id: found.id, name: found.name };
+  var answer = withScope_({ ok: true, id: found.id, name: found.name }, found);
 
   // Signed in with Google before entering the code: link the two. A bad or
   // stale token never costs the friend their admission — the code was good.
@@ -223,22 +224,22 @@ function handleGoogle_(body) {
   // Authenticated. Linked through a code: that code must still be live, so
   // revoking or deleting it turns its Google accounts off too. Authenticated
   // by hand with no code: the row's name, or the email, is who they are.
-  var id, name, codeShown;
+  var id, name, codeShown, scoped = null;
   if (row.code) {
     var found = lookup_(normalize_(row.code));
     if (!found || found.revoked) {
       refuse_(game, row.id, who.email, 'revoked (Google)', body.client);
       return { ok: false, reason: 'revoked' };
     }
-    id = found.id; name = found.name; codeShown = found.code;
+    id = found.id; name = found.name; codeShown = found.code; scoped = found;
   } else {
     id = row.id || who.email; name = id; codeShown = '(no code)';
   }
 
   append_(SIGNIN_TAB, ['when', 'game', 'name', 'code', 'verdict'],
           [new Date(), safe_(game, 60), safe_(name, 100), safe_(codeShown, 60),
-           safe_('admitted via Google (' + who.email + ')', 200)]);
-  return { ok: true, id: id, name: name, email: who.email };
+           safe_('admitted via Google (' + who.email + ')' + (scoped && scoped.scope ? ', public games only' : ''), 200)]);
+  return withScope_({ ok: true, id: id, name: name, email: who.email }, scoped);
 }
 
 /** Someone already holding a pass links a Google account to it. */
@@ -251,7 +252,7 @@ function handleLink_(body) {
   var found = lookupId_(String(body.id || ''));
   if (!found) return { ok: false, reason: 'unknown' };
   if (!link_(who, found, found.code, String(body.game || ''))) return { ok: false, reason: 'revoked' };
-  return { ok: true, id: found.id, name: found.name, linked: who.email };
+  return withScope_({ ok: true, id: found.id, name: found.name, linked: who.email }, found);
 }
 
 /**
@@ -484,9 +485,17 @@ function sessionTab_() {
  * The code list, cached. Reading a tab costs a spreadsheet round trip and the
  * list changes about as often as the owner makes a friend.
  *
- * Codes tab columns: code | name | revoked? | notes
+ * Codes tab columns: code | name | revoked? | notes | access
  * Anything in the third column (an x, a yes, a date) turns that invite off
  * without deleting the row, so the history in Signins still means something.
+ *
+ * ACCESS. Blank (or "everything") admits its holder everywhere. "public games"
+ * admits them only to what the owner's public-access switch would open: the
+ * finished games, not the prototype archive, the private sites, the
+ * invite-only games or the library's Apps — every page that opens the door
+ * with `ignorePublicAccess`. The answer then carries `scope: 'public'`, the
+ * browser keeps it in the pass, and the door asks such a pass for a full code
+ * wherever the switch would not open the page.
  */
 function lookup_(code) {
   var list = codeList_();
@@ -505,18 +514,43 @@ function codeList_() {
     var tab = book_().getSheetByName(CODES_TAB);
     if (!tab) return [];   // no list means nobody is on it — fail closed
     var last = tab.getLastRow();
-    var rows = last < 1 ? [] : tab.getRange(1, 1, last, 3).getValues();
+    var rows = last < 1 ? [] : tab.getRange(1, 1, last, 5).getValues();
     list = [];
     for (var i = 0; i < rows.length; i++) {
       var c = normalize_(rows[i][0]);
       var name = String(rows[i][1] || '').trim();
       // Skip the header and any blank line, so the tab can have either.
       if (!c || c === 'CODE') continue;
-      list.push({ code: c, id: name || c, name: name || c, revoked: String(rows[i][2] || '').trim() !== '' });
+      list.push({ code: c, id: name || c, name: name || c, revoked: String(rows[i][2] || '').trim() !== '',
+                  scope: accessOf_(rows[i][4]) });
     }
     cache.put('codes', JSON.stringify(list), CODES_TTL);
   }
   return list;
+}
+
+/** "public games" (or anything starting "public") limits a code; blank or anything else does not. */
+function accessOf_(v) {
+  return /^public/.test(String(v || '').trim().toLowerCase()) ? 'public' : '';
+}
+
+/** Add `scope` to an answer when the code it came from is limited. */
+function withScope_(answer, found) {
+  if (found && found.scope) answer.scope = found.scope;
+  return answer;
+}
+
+var ACCESS_CHOICES = ['everything', 'public games'];
+
+/** Give the Codes tab its "access" column and dropdown, if it lacks them. */
+function codesAccessColumn_() {
+  var tab = book_().getSheetByName(CODES_TAB);
+  if (!tab) return;
+  var head = tab.getRange(1, 5);
+  if (String(head.getValue()) === 'access' && tab.getRange(2, 5).getDataValidation()) return;
+  head.setValue('access');
+  tab.getRange(2, 5, Math.max(tab.getMaxRows() - 1, 1), 1).setDataValidation(
+    SpreadsheetApp.newDataValidation().requireValueInList(ACCESS_CHOICES, true).setAllowInvalid(true).build());
 }
 
 /**
@@ -601,6 +635,7 @@ var TAB_ORDER = [CODES_TAB, GOOGLE_TAB, 'Who', SIGNIN_TAB, REFUSED_TAB];
  * cannot do is skipped and logged.
  */
 function tidyTabs_() {
+  try { codesAccessColumn_(); } catch (err) { console.error('gate: access column ' + err); }
   try {
     var book = book_();
     var pos = 1;
@@ -682,7 +717,7 @@ function inviteFriend() {
   if (!name) return;
 
   var code = mintCode_(name);
-  append_(CODES_TAB, ['code', 'name', 'revoked', 'notes'], [code, name, '', '']);
+  append_(CODES_TAB, ['code', 'name', 'revoked', 'notes', 'access'], [code, name, '', '', '']);
   CacheService.getScriptCache().remove('codes');   // so it works immediately
   ui.alert('Invite for ' + name, linksFor_(code), ui.ButtonSet.OK);
 }
