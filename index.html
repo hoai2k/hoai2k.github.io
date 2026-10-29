@@ -231,6 +231,60 @@
         filter: saturate(1.08) contrast(1.04);
       }
 
+      /* "Controller recommended", on the picture of a game best played with a
+         pad. Above the picture's bottom shade, so it reads on any art. */
+      .controller-badge {
+        position: absolute;
+        left: 10px;
+        bottom: 10px;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px 4px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        background: rgba(8, 9, 13, 0.72);
+        backdrop-filter: blur(6px);
+        color: var(--text);
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        pointer-events: none;
+      }
+
+      .controller-badge svg {
+        width: 1.25em;
+        height: 1.25em;
+        color: var(--lime);
+      }
+
+      .controller-badge {
+        white-space: nowrap;
+      }
+
+      .controller-badge .short {
+        display: none;
+      }
+
+      /* The narrow side-picture of the phone layout: one word. */
+      @media (max-width: 430px) and (min-width: 341px) {
+        .controller-badge {
+          left: 6px;
+          bottom: 6px;
+          padding: 3px 8px 3px 6px;
+          font-size: 0.7rem;
+        }
+
+        .controller-badge .long {
+          display: none;
+        }
+
+        .controller-badge .short {
+          display: inline;
+        }
+      }
+
       .thumb::after {
         content: "";
         position: absolute;
@@ -748,6 +802,7 @@
   },
   {
     "slug": "mando",
+    "controller": true,
     "url": "/mando/",
     "title": "Bounty Hunters",
     "description": "A Bounty Hunter battle and exploration game with missions, wave battles, and PvP.",
@@ -759,6 +814,7 @@
   },
   {
     "slug": "mechmayhem",
+    "controller": true,
     "url": "/mechmayhem/",
     "title": "Mech Mayhem",
     "description": "A 3D mech battle arena with a sordid cast of robots in destructible cities, with local multiplayer, and lots of ultimates.",
@@ -770,6 +826,7 @@
   },
   {
     "slug": "jjkbrawler",
+    "controller": true,
     "url": "/jjkbrawler/",
     "title": "JJK Brawler",
     "description": "A cursed-energy platform fighter for one to four players, with two dozen fighters, ultimates, Domain Expansions, and twenty arenas.",
@@ -781,6 +838,7 @@
   },
   {
     "slug": "battlebotarena",
+    "controller": true,
     "url": "/battlebotarena/",
     "title": "Battle Bot Arena",
     "description": "A robot combat league duel with three-minute matches, two machines, weapon controls, and one bot left standing.",
@@ -792,6 +850,7 @@
   },
   {
     "slug": "rounders",
+    "controller": true,
     "url": "/rounders/",
     "title": "Rounders",
     "description": "A one-to-four-player arena brawler with round shooters, power cards, and arenas with attitude.",
@@ -825,6 +884,7 @@
   },
   {
     "slug": "charlie/party",
+    "controller": true,
     "url": "/charlie/party/",
     "title": "Charlie Party",
     "description": "A cheerful character-party brawler with multiple arenas, character picks, and mini-game energy. Based on drawings by Charlie.",
@@ -836,6 +896,7 @@
   },
   {
     "slug": "tennis",
+    "controller": true,
     "url": "/tennis/",
     "title": "Cursed Court",
     "description": "A colorful JJK × Mandalorian tennis showdown with supernatural serves and stadium-sized arcade spectacle.",
@@ -858,6 +919,7 @@
   },
   {
     "slug": "supergoatman",
+    "controller": true,
     "url": "/supergoatman/",
     "title": "Super Goat Man",
     "description": "A floppy physics brawler where up to four goats grab, kick, and headbutt through wildly themed arenas.",
@@ -869,6 +931,7 @@
   },
   {
     "slug": "mini/hopper",
+    "controller": true,
     "url": "/mini/hopper/",
     "title": "Hopper the Grasshopper",
     "description": "Pilot a giant mecha grasshopper through a three-episode anime adventure, jumping, kicking, and shooting eye lasers on your way to victory.",
@@ -1142,6 +1205,13 @@
         } else {
           thumb.classList.add("generated-thumb", game.slug.toLowerCase().replace(/[^a-z0-9-]/g, ""));
           thumb.dataset.initial = game.title.charAt(0);
+        }
+
+        if (game.controller) {
+          const badge = document.createElement("span");
+          badge.className = "controller-badge";
+          badge.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 6h10a5 5 0 0 1 4.9 6l-1 4.6a2.6 2.6 0 0 1-4.5 1.2L14.6 16H9.4l-1.8 1.8a2.6 2.6 0 0 1-4.5-1.2l-1-4.6A5 5 0 0 1 7 6zm0 3v1.5H5.5v1.5H7v1.5h1.5V12H10v-1.5H8.5V9H7zm9.5.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm2 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg><span class="long">Controller recommended</span><span class="short">Controller</span>';
+          thumb.append(badge);
         }
 
         (game.tags || ["Game"]).slice(0, 3).forEach((tag) => {
