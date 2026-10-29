@@ -755,13 +755,12 @@
     <script>
       const GAMES = [
   {
-    "slug": "cambrian",
-    "url": "/cambrian/",
-    "title": "Ancient Seas Trilogy",
-    "description": "Three prehistoric ocean survival games — Cambrian Conquest, Devonian Domination, and Triassic Triumph — where you eat, grow, fight, and flee across 500 million years.",
-    "thumbnail": "assets/ancient-seas-trilogy.png",
+    "slug": "cambrian/cambrian",
+    "url": "/cambrian/cambrian/",
+    "title": "Cambrian Conquest",
+    "description": "Eat, grow, fight and flee through the Cambrian sea, 508 million years ago, when everything was hungry. The first of the Ancient Seas trilogy.",
+    "thumbnail": "assets/cambrian-conquest.png",
     "tags": [
-      "Trilogy",
       "Survival",
       "Prehistoric"
     ]
@@ -1142,7 +1141,7 @@
         if (game.thumbnail) {
           const picture = document.createElement("picture");
           const stem = game.thumbnail.split("/").pop().replace(/\.[^.]+$/, "");
-          const nativeScreens = new Set(["mechmayhem", "mando", "cambrian", "mini/hopper", "mini/kingdomofthefairies", "battlebotarena", "jjkbrawler", "rounders", "tennis"]);
+          const nativeScreens = new Set(["mechmayhem", "mando", "cambrian/cambrian", "mini/hopper", "mini/kingdomofthefairies", "battlebotarena", "jjkbrawler", "rounders", "tennis"]);
           const native = nativeScreens.has(game.slug);
           const cropPath = (variant) => native
             ? `thumbnails/${stem}-${variant}.webp`
