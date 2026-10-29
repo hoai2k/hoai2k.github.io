@@ -193,7 +193,8 @@ Every repository under this account, and whether it touches the gate:
 | [`mini`](https://github.com/hoai2k/mini) | **Yes, loader** | Six copies: `onemonster/`, `gliders/`, `bronzedrum/` and `icecreamcone/` under `game/src/gate/gate.js`, `bookzam/app/src/gate/gate.js`, and `sites/shared/gate.js` for the private sites. The Prototype archive games and the sites pass `ignorePublicAccess: true` with their own `public-access.json` as `accessFile`; the library shows the archive only to pass holders |
 | [`mando`](https://github.com/hoai2k/mando) | **Yes, loader (TypeScript)** | `src/gate/gate.ts`, the loader's TypeScript twin: on when the build sets `VITE_GATE_ENDPOINT`, which it passes to the shared door with `alwaysOn`; covered by `tools/test-gate.mjs` against the live door |
 | [`cambrian`](https://github.com/hoai2k/cambrian) | No — but reads the pass | `src/shared/feedback.ts` reads `gate.pass` from `localStorage`, unnamespaced, only to pre-fill a returning reporter's name on its feedback form. The game itself is not gated: nothing in it ever shows a door. |
-| `francis`, `mechmayhem`, `bloxverse`, `earth`, `mechbrawler`, `swingers`, `dinoblocks` | No | Checked directly (2026-09-26): no reference to the gate, the endpoint, or `gate.pass` in any of them. |
+| [`swingers`](https://github.com/hoai2k/swingers) | **Yes, loader** | `gate/gate.js`, opened by `src/boot.js` for all four games (`/`, `wobblers/`, `spiders/`, `battles/`) with `ignorePublicAccess` and each game's own `public-access.json`: invite-only, so closed to "public games" codes |
+| `francis`, `mechmayhem`, `bloxverse`, `earth`, `mechbrawler`, `dinoblocks` | No | Checked directly (2026-09-26): no reference to the gate, the endpoint, or `gate.pass` in any of them. |
 
 **Every loader copy is byte-identical to `gate/loader.js`** (October 2026);
 `md5sum` across them is the check. Several of these games deploy from a
