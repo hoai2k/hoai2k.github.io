@@ -104,6 +104,20 @@ if the name is empty), or set any row to `blocked`. Edits take effect at
 once. Revoking a code also turns off every Google account linked to it. The pass stored in the browser is the same however
 someone got in, so nothing in the games changes.
 
+## Codes that open only the public games
+
+The Codes tab's **access** column limits a code. Blank (or `everything`) opens
+everything, as before; **`public games`** opens only what the public-access
+switch would open: the finished games, but not the mini Prototype archive, the
+private sites, the invite-only swingers games or the library's Apps (every page
+that opens the door with `ignorePublicAccess`, unless its own `accessFile`
+says to follow the switch). The pass such a code leaves carries
+`scope: 'public'`; at a locked page the door shows anyway, saying the code
+opens the public games and this one needs a personal invite, and a full code
+entered there replaces the pass. A Google account linked to a limited code
+gets the same limit. While public access is on, a limited code changes
+nothing a visitor can see; it matters once the switch is off.
+
 ## One door, loaded by every game
 
 The door lives once, at [`gate/gate.js`](gate/gate.js), served at

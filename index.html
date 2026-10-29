@@ -1319,6 +1319,16 @@
         }
       }
 
+      /**
+       * A pass from a code that opens everything, not one limited to the
+       * public games (the Codes tab's "access" column). The Apps are not for
+       * public-games codes, so only this shows them.
+       */
+      function hasFullPass() {
+        if (!hasPass()) return false;
+        try { return JSON.parse(localStorage.getItem("gate.pass")).scope !== "public"; } catch { return false; }
+      }
+
       /** Forget this browser's pass. The owner's way back to the door. */
       function forgetPass() {
         try { localStorage.removeItem("gate.pass"); } catch { /* private mode */ }
@@ -1339,7 +1349,7 @@
         grid.replaceChildren(...games.map(renderCard));
         // Apps need a pass actually held in this browser. `unlocked` can also
         // mean the public-access switch is on, which must not show them.
-        const showApps = hasPass();
+        const showApps = hasFullPass();
         appGrid.replaceChildren(...(showApps ? APPS.map(renderCard) : []));
         appsSection.hidden = !showApps;
         count.textContent = `${games.length} ${games.length === 1 ? "game" : "games"} available`;

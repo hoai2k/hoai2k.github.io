@@ -168,6 +168,8 @@ export function readPass() {
     const pass = { id: p.id, name: typeof p.name === 'string' ? p.name : p.id, since: p.since || Date.now() };
     // The Google account this pass is linked to, when this browser knows it.
     if (typeof p.google === 'string' && p.google !== '') pass.google = p.google;
+    // A code that opens only the public games (the Codes tab's "access").
+    if (p.scope === 'public') pass.scope = 'public';
     return pass;
   } catch {
     return null;   // private mode, or storage disabled entirely
@@ -585,11 +587,15 @@ export function openGate(opts) {
   } catch { /* an exotic URL is not worth failing a boot over */ }
 
   const pass = readPass();
-  if (pass) {
+  // A full pass opens everything. A "public games" pass opens only what the
+  // owner's public-access switch would: any page that does not ignore it, and
+  // one that does only if its own accessFile says to follow it (checked below).
+  if (pass && (!pass.scope || !opts.ignorePublicAccess)) {
     pingSession(pass, opts.game);
     stripGateParams(INVITE_PARAM, RESET_PARAM);
     return Promise.resolve();
   }
+  const limited = pass;   // a "public games" pass at a page that ignores the switch
 
   return new Promise((resolve) => {
     // Starts the instant there is no pass, before the public-access check
@@ -602,8 +608,18 @@ export function openGate(opts) {
     // Some pages never ask the switch unless their own file says to: see
     // `opts.ignorePublicAccess` and `opts.accessFile`.
     followsPublicAccess(opts)
-      .then((follows) => (follows ? publicAccessOn() : false))
+      .then((follows) => {
+        if (follows && limited) return 'limited';
+        return follows ? publicAccessOn() : false;
+      })
       .then((isPublic) => {
+        if (isPublic === 'limited') {
+          // This page follows the switch after all, so a public-games pass opens it.
+          pingSession(limited, opts.game);
+          stripGateParams(INVITE_PARAM, RESET_PARAM);
+          resolve();
+          return;
+        }
         if (isPublic) {
           // The owner's own switch, not an invite: nothing is written to
           // PASS_STORE, so a real friend's pass is untouched either way this
@@ -668,6 +684,10 @@ export function openGate(opts) {
         door.slot.append(back);
       }
 
+      if (limited) {
+        door.note.textContent = 'Your code opens the public games. This one needs a personal invite.';
+      }
+
       const fromLink = codeFromUrl();
       if (fromLink) {
         // An invite link spends itself. The form stays underneath so a bad code
@@ -705,7 +725,16 @@ export function openGate(opts) {
         try {
           const r = await post({ kind: 'google', game: opts.game, credential, client: clientInfo() });
           if (r && r.ok && typeof r.id === 'string' && r.id !== '') {
-            admit({ id: r.id, name: r.name || r.id, since: Date.now(), google: r.email || email });
+            const pass = { id: r.id, name: r.name || r.id, since: Date.now(), google: r.email || email };
+            if (r.scope === 'public') pass.scope = 'public';
+            if (pass.scope && opts.ignorePublicAccess && !(await followsPublicAccess(opts))) {
+              // Signed in fine, but this account's code opens only the public games.
+              writePass(pass);
+              door.note.className = 'gate-note gate-bad';
+              door.note.textContent = 'Your access opens the public games. This one needs a personal invite.';
+              return;
+            }
+            admit(pass);
             return;
           }
           if (r && r.reason === 'unlinked') {
@@ -761,6 +790,19 @@ async function redeem(code, ctx) {
     const r = await post(body);
     if (r && r.ok && typeof r.id === 'string' && r.id !== '') {
       const pass = { id: r.id, name: r.name || r.id, since: Date.now() };
+      if (r.scope === 'public') pass.scope = 'public';
+      if (pass.scope && opts.ignorePublicAccess && !(await followsPublicAccess(opts))) {
+        // A real code, but one that opens only the public games: keep it for
+        // them, and say why this page still wants a personal invite.
+        writePass(pass);
+        warming.abort();
+        busy(false);
+        door.note.className = 'gate-note gate-bad';
+        door.note.textContent = 'That code opens the public games. This one needs a personal invite.';
+        input.focus();
+        input.select();
+        return;
+      }
       if (typeof r.linked === 'string' && r.linked !== '') pass.google = r.linked;
       admit(pass);
       return;
