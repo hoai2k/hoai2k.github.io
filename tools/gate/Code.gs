@@ -456,15 +456,25 @@ function handleSession_(body) {
   if (n > SESSION_CAP_PER_HOUR) {
     // One line, once, the same as a flood of refusals.
     if (n === SESSION_CAP_PER_HOUR + 1) {
-      append_(sessionTab_(), ['when', 'game', 'name', 'id'],
+      append_(sessionTab_(), SESSION_HEADER,
               [new Date(), '', 'FLOOD — over ' + SESSION_CAP_PER_HOUR +
-               ' session pings this hour; further rows suppressed until the hour turns', '']);
+               ' session pings this hour; further rows suppressed until the hour turns', '', '']);
     }
     return;
   }
-  append_(sessionTab_(), ['when', 'game', 'name', 'id'],
-          [new Date(), safe_(body.game, 60), safe_(body.name, 100), safe_(body.id, 100)]);
+  append_(sessionTab_(), SESSION_HEADER,
+          [new Date(), safe_(body.game, 60), safe_(body.name, 100), safe_(body.id, 100),
+           safe_(body.email, 200)]);
 }
+
+/**
+ * Session columns. "Google account" is the account the visitor's browser says
+ * its pass is linked to: verified with Google when it was linked, but read
+ * from the browser's own storage on each visit, like the name. The pages that
+ * stay locked while public access is on require it, so their rows always have
+ * one.
+ */
+var SESSION_HEADER = ['when', 'game', 'name', 'id', 'Google account'];
 
 /**
  * ROTATION. Sessions land in a tab named for the current month — "Sessions
@@ -636,6 +646,11 @@ var TAB_ORDER = [CODES_TAB, GOOGLE_TAB, 'Who', SIGNIN_TAB, REFUSED_TAB];
  */
 function tidyTabs_() {
   try { codesAccessColumn_(); } catch (err) { console.error('gate: access column ' + err); }
+  try {
+    // A month's tab started before the Google account column existed: head it.
+    var month = book_().getSheetByName(sessionTab_());
+    if (month && String(month.getRange(1, 5).getValue()) === '') month.getRange(1, 5).setValue(SESSION_HEADER[4]);
+  } catch (err) { console.error('gate: session header ' + err); }
   try {
     var book = book_();
     var pos = 1;
