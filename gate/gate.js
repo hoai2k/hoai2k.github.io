@@ -281,7 +281,7 @@ async function followsPublicAccess(opts) {
 
 /** Fire-and-forget. Carries an id, never a code, so it cannot be replayed in. */
 function pingSession(pass, game) {
-  const body = JSON.stringify({ kind: 'session', game, id: pass.id, name: pass.name });
+  const body = JSON.stringify({ kind: 'session', game, id: pass.id, name: pass.name, email: pass.google || '' });
   try {
     const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
     if (navigator.sendBeacon(endpoint, blob)) return;
@@ -587,15 +587,18 @@ export function openGate(opts) {
   } catch { /* an exotic URL is not worth failing a boot over */ }
 
   const pass = readPass();
-  // A full pass opens everything. A "public games" pass opens only what the
-  // owner's public-access switch would: any page that does not ignore it, and
-  // one that does only if its own accessFile says to follow it (checked below).
-  if (pass && (!pass.scope || !opts.ignorePublicAccess)) {
+  // Any pass opens a page that follows the owner's public-access switch. A page
+  // that stays locked while the switch is on (ignorePublicAccess) needs more: a
+  // full pass, not a "public games" one, AND a linked Google account — so the
+  // locked pages always know who is visiting. That page's own accessFile can
+  // still make it follow the switch, which is checked below.
+  if (pass && (!opts.ignorePublicAccess || (!pass.scope && (pass.google || !googleEnabled())))) {
     pingSession(pass, opts.game);
     stripGateParams(INVITE_PARAM, RESET_PARAM);
     return Promise.resolve();
   }
-  const limited = pass;   // a "public games" pass at a page that ignores the switch
+  const held = pass;   // a pass that is not enough here on its own, if any
+  const limited = held && held.scope ? held : null;
 
   return new Promise((resolve) => {
     // Starts the instant there is no pass, before the public-access check
@@ -607,15 +610,17 @@ export function openGate(opts) {
 
     // Some pages never ask the switch unless their own file says to: see
     // `opts.ignorePublicAccess` and `opts.accessFile`.
+    let locked = false;
     followsPublicAccess(opts)
       .then((follows) => {
-        if (follows && limited) return 'limited';
+        locked = !follows && !!opts.ignorePublicAccess;
+        if (follows && held) return 'held';
         return follows ? publicAccessOn() : false;
       })
       .then((isPublic) => {
-        if (isPublic === 'limited') {
-          // This page follows the switch after all, so a public-games pass opens it.
-          pingSession(limited, opts.game);
+        if (isPublic === 'held') {
+          // This page follows the switch after all, so any pass opens it.
+          pingSession(held, opts.game);
           stripGateParams(INVITE_PARAM, RESET_PARAM);
           resolve();
           return;
@@ -639,9 +644,18 @@ export function openGate(opts) {
       let settled = false;
       // The Google sign-in waiting for a code to link to, if any.
       const google = { credential: null };
+      // At a locked page: the full pass waiting for its Google sign-in, if any.
+      let awaitingGoogle = null;
 
       const admit = (p) => {
         if (settled) return;
+        if (locked && googleEnabled() && !p.google && !p.scope) {
+          // The code is good, and stays good for every other game, but this
+          // page also wants the Google account the visit is logged under.
+          writePass(p);
+          askForGoogle(p);
+          return;
+        }
         settled = true;
         cancelGoogle();
         writePass(p);
@@ -688,8 +702,19 @@ export function openGate(opts) {
         door.note.textContent = 'Your code opens the public games. This one needs a personal invite.';
       }
 
-      const fromLink = codeFromUrl();
-      if (fromLink) {
+      /** A full pass, no Google yet: hide the code box and ask for Google. */
+      function askForGoogle(p) {
+        awaitingGoogle = p;
+        input.hidden = true;
+        go.hidden = true;
+        door.note.className = 'gate-note';
+        door.note.textContent = 'This page also needs a Google sign-in. Sign in with the account to link to your invite.';
+      }
+
+      const fromLink = held && !held.scope ? null : codeFromUrl();
+      if (held && !held.scope) {
+        askForGoogle(held);
+      } else if (fromLink) {
         // An invite link spends itself. The form stays underneath so a bad code
         // lands somewhere the visitor can correct it.
         input.value = fromLink;
@@ -735,6 +760,17 @@ export function openGate(opts) {
               return;
             }
             admit(pass);
+            return;
+          }
+          if (r && r.reason === 'unlinked' && awaitingGoogle) {
+            // The pass is already proven: link this account to it.
+            const l = await post({ kind: 'link', game: opts.game, id: awaitingGoogle.id, name: awaitingGoogle.name, credential });
+            if (l && l.ok && typeof l.linked === 'string') {
+              admit({ ...awaitingGoogle, google: l.linked });
+              return;
+            }
+            door.note.className = 'gate-note gate-bad';
+            door.note.textContent = googleRefusal(l && l.reason, 'link');
             return;
           }
           if (r && r.reason === 'unlinked') {

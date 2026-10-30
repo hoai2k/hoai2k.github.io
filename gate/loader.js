@@ -14,9 +14,9 @@
  *    door, fetched from games.hoai.net.
  *  - A friend who already holds a pass is let straight in, without waiting on
  *    the network; the shared door is still fetched in the background to log
- *    the session. A pass from a "public games" code is let straight in only
- *    where the page does not ignore the public-access switch; elsewhere the
- *    shared door decides.
+ *    the session. At a page that ignores the public-access switch, only a
+ *    full pass with a linked Google account is let straight in; anything
+ *    else is handed to the shared door, which asks for what is missing.
  *  - If the shared door cannot be fetched and there is no pass, a plain
  *    "try again" screen stands in front of the game. That fails closed, like
  *    the door does when it cannot reach the guest list.
@@ -56,6 +56,7 @@ export function readPass() {
     if (!p || typeof p.id !== 'string' || p.id === '') return null;
     const pass = { id: p.id, name: typeof p.name === 'string' ? p.name : p.id, since: p.since || Date.now() };
     if (p.scope === 'public') pass.scope = 'public';
+    if (typeof p.google === 'string' && p.google !== '') pass.google = p.google;
     return pass;
   } catch {
     return null;
@@ -80,7 +81,10 @@ export function openGate(opts) {
   if (!gateEnabled()) return Promise.resolve();
 
   const pass = readPass();
-  if (pass && !hasParam('gatereset') && (!pass.scope || !(opts && opts.ignorePublicAccess))) {
+  // A page that stays locked while public access is on lets in only a full
+  // pass with a Google account straight away; the shared door handles the rest.
+  const locked = !!(opts && opts.ignorePublicAccess);
+  if (pass && !hasParam('gatereset') && (!locked || (!pass.scope && pass.google))) {
     // Already in. The shared door logs the session and tidies the address bar.
     sharedDoor().then((m) => m.openGate(opts)).catch(() => {});
     return Promise.resolve();
