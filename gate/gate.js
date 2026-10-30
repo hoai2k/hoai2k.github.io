@@ -292,6 +292,39 @@ function pingSession(pass, game) {
   }).catch(() => { /* the log is never worth failing a boot over */ });
 }
 
+// ---------- visit counting ----------
+
+/**
+ * GoatCounter, the owner's visitor counter (hoai.goatcounter.com): no
+ * cookies, no identifiers. The door adds it to every page it guards, so every
+ * gated game is counted under its own path without each game adding a tag.
+ * The library's /stats/ page reads the totals.
+ */
+const GOATCOUNTER = 'https://hoai.goatcounter.com/count';
+const GOATCOUNTER_SCRIPT = 'https://gc.zgo.at/count.js';
+
+/** Games that load their own counter (into the same site) once they start. */
+const COUNTS_ITSELF = new Set(['battlebotarena', 'battlebotarena-stats']);
+
+let counting = false;
+function countVisit(game) {
+  if (counting || isLocal() || COUNTS_ITSELF.has(game)) return;
+  counting = true;
+  const add = () => {
+    // A page that already counts itself is left to it.
+    if (document.querySelector('script[data-goatcounter]') || (window.goatcounter && window.goatcounter.count)) return;
+    // The path without the query string, so ?invite= and the like don't split a game's count.
+    window.goatcounter = Object.assign(window.goatcounter || {}, { path: () => location.pathname });
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = GOATCOUNTER_SCRIPT;
+    script.dataset.goatcounter = GOATCOUNTER;
+    document.head.appendChild(script);
+  };
+  if (document.readyState === 'complete') setTimeout(add, 1000);
+  else window.addEventListener('load', () => setTimeout(add, 1000), { once: true });
+}
+
 // ---------- Google sign-in ----------
 
 /** Whether the door offers Google sign-in at all. */
@@ -571,6 +604,7 @@ export function openGate(opts) {
   try { window.gateReset = () => { clearPass(); location.reload(); }; } catch { /* sealed window */ }
 
   if (!gateEnabled()) return Promise.resolve();
+  countVisit(opts.game);
 
   // `?gatereset=1` before anything reads the pass, so this turn sees no pass
   // and puts the door up.
