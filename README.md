@@ -196,8 +196,13 @@ Every repository under this account, and whether it touches the gate:
 | [`swingers`](https://github.com/hoai2k/swingers) | **Yes, loader** | `gate/gate.js`, opened by `src/boot.js` for all four games (`/`, `wobblers/`, `spiders/`, `battles/`) with `ignorePublicAccess` and each game's own `public-access.json`: invite-only, so closed to "public games" codes |
 | `francis`, `mechmayhem`, `bloxverse`, `earth`, `mechbrawler`, `dinoblocks` | No | Checked directly (2026-09-26): no reference to the gate, the endpoint, or `gate.pass` in any of them. |
 
-**Every loader copy is byte-identical to `gate/loader.js`** (October 2026);
-`md5sum` across them is the check. Several of these games deploy from a
+**Loader copies are byte-identical to `gate/loader.js`** (October 2026);
+`md5sum` across them is the check. The latest revision (only a locked page's
+fast path changed: it now lets in only a full pass with Google) is in mini,
+swingers and battlebotarena; jjkbrawler, rounders, jujutsubattlegrounds,
+supergoatman and tennis keep the one before it, which behaves the same for
+them because none of their pages is locked. Copy the latest in when one
+becomes locked or is next touched. Several of these games deploy from a
 `deploy` branch with deploys switched off, so their loader is on `main` but
 reaches the live site only when that game is next deployed; until then the
 live game shows the older door, which keeps working against the same guest
@@ -233,6 +238,10 @@ back offices rather than part of the games, so nothing links to them:
 | [`/jujutsubattlegrounds/stats/`](https://games.hoai.net/jujutsubattlegrounds/stats/) | invite |
 | [`/cambrian/stats/`](https://games.hoai.net/cambrian/stats/) | open |
 | [`/mechmayhem/stats/`](https://games.hoai.net/mechmayhem/stats/) | open |
+
+Battle Bot Arena's own counter is off (`goatCounterCode: ""`): the door counts
+its visits like every other game's, and its page now points to `/stats/`. Its
+match events (results, controllers, errors) stopped with it.
 
 The gated ones report their own label at the door, so the `Who` tab's `games`
 column reads `battlebotarena-stats` rather than `battlebotarena` — a visit to
