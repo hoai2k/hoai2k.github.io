@@ -206,6 +206,21 @@ loader to it.
 
 ## Stats pages
 
+**[`/stats/`](https://games.hoai.net/stats/) is the one for everything**: every
+game, app and library page with its visit total, read from the owner's
+GoatCounter site (`hoai.goatcounter.com`) through its public per-page counter
+(`/counter/<path>.json`, no key needed). Unlinked, `noindex`, and behind the
+door as a page that stays locked under public access, so it needs a full pass
+and a Google sign-in. Its list of pages is `PAGES` in `stats/index.html`:
+add a new game's path there.
+
+Counting is GoatCounter everywhere, into that one site, by path: the shared
+door adds it to every page it guards (`countVisit` in `gate/gate.js`), and
+the ungated pages (the games page, the mini library, its ungated games and
+apps, Charlie's games) carry the standard tag.
+
+The older per-game pages below predate it:
+
 Each game keeps its own visitor stats page at `/<game>/stats/`, counted by
 [GoatCounter](https://www.goatcounter.com/). They are `noindex`, and they are
 back offices rather than part of the games, so nothing links to them:

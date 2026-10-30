@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Stats · Games by Hoai Nguyen</title>
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <style>
+      :root {
+        --bg: #08090d;
+        --panel: rgba(18, 22, 33, 0.78);
+        --text: #f7f8ff;
+        --muted: #aeb7cc;
+        --line: rgba(255, 255, 255, 0.12);
+        --cyan: #39d5ff;
+        --lime: #b8ff4f;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: radial-gradient(ellipse at 20% 0%, rgba(57, 213, 255, 0.08), transparent 55%), var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      /* Nothing shows until the door has let the visitor through. */
+      body.locked main { visibility: hidden; }
+
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 40px 16px 72px;
+      }
+
+      a { color: var(--cyan); }
+
+      .eyebrow {
+        color: var(--lime);
+        font-size: 0.82rem;
+        font-weight: 900;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1 { margin: 8px 0 6px; font-size: clamp(2rem, 6vw, 2.8rem); }
+
+      .lead { margin: 0 0 24px; color: var(--muted); line-height: 1.6; }
+
+      .totals {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+
+      .total {
+        flex: 1 1 180px;
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .total b { display: block; font-size: 1.8rem; }
+      .total span { color: var(--muted); font-size: 0.9rem; }
+
+      h2 {
+        margin: 28px 0 8px;
+        font-size: 1.05rem;
+        color: var(--muted);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      table { width: 100%; border-collapse: collapse; }
+
+      td, th {
+        padding: 9px 6px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+      }
+
+      th { color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+      td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+      td.path { color: var(--muted); font-size: 0.85rem; }
+      tr.zero td { color: rgba(174, 183, 204, 0.55); }
+
+      .bar {
+        height: 6px;
+        margin-top: 5px;
+        border-radius: 3px;
+        background: linear-gradient(90deg, var(--cyan), var(--lime));
+      }
+
+      .note { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+
+      @media (max-width: 560px) {
+        td.path { display: none; }
+        th.path { display: none; }
+      }
+    </style>
+  </head>
+  <body class="locked">
+    <main>
+      <span class="eyebrow">Back office</span>
+      <h1>Visitors</h1>
+      <p class="lead">
+        Visits to every game, counted by GoatCounter since each game started
+        counting. All time, all visitors.
+        <a href="https://hoai.goatcounter.com" target="_blank" rel="noopener">Open the full dashboard</a>
+        for days, countries and where people came from.
+      </p>
+
+      <div class="totals">
+        <div class="total"><b id="totalAll">…</b><span>visits across the whole site</span></div>
+        <div class="total"><b id="totalListed">…</b><span>visits to the pages below</span></div>
+      </div>
+
+      <div id="groups"></div>
+
+      <p class="note">
+        A game shows 0 until it has been visited since it started counting:
+        games that count through the invite door start when that game is next
+        deployed. Numbers can lag the dashboard by a few minutes.
+      </p>
+    </main>
+
+    <script type="module">
+      import { openGate } from "../gate/gate.js";
+
+      /** Every page that counts, by group. Paths as GoatCounter records them. */
+      const PAGES = [
+        ["Games", [
+          ["Cambrian Conquest", "/cambrian/cambrian/"],
+          ["Devonian Domination", "/cambrian/devonian/"],
+          ["Triassic Triumph", "/cambrian/triassic/"],
+          ["Ancient Seas (trilogy menu)", "/cambrian/"],
+          ["Bounty Hunters", "/mando/"],
+          ["Mech Mayhem", "/mechmayhem/"],
+          ["JJK Brawler", "/jjkbrawler/"],
+          ["Battle Bot Arena", "/battlebotarena/"],
+          ["Rounders", "/rounders/"],
+          ["Cursed Court", "/tennis/"],
+          ["Super Goat Man", "/supergoatman/"],
+          ["Jujutsu Battlegrounds", "/jujutsubattlegrounds/"],
+          ["American Girl Doll Race", "/charlie/americangirldollrace/"],
+          ["Charlie Party", "/charlie/party/"],
+          ["Doll Puppets", "/charlie/dollpuppets/"]
+        ]],
+        ["mini games", [
+          ["Hopper the Grasshopper", "/mini/hopper/"],
+          ["The Ice-Cream Cone Coot", "/mini/icecreamcone/"],
+          ["Kingdom of the Fairies", "/mini/kingdomofthefairies/"],
+          ["Fibre Art", "/mini/fibreart/"],
+          ["Half-Blood Quests", "/mini/percyjackson/"],
+          ["Bronze Drum", "/mini/bronzedrum/"],
+          ["Tank Wars", "/mini/tankwars/"],
+          ["One Monster After Another", "/mini/onemonster/"],
+          ["Gliders", "/mini/gliders/"]
+        ]],
+        ["Swingers", [
+          ["Swingers", "/swingers/"],
+          ["Spider Swingers", "/swingers/spiders/"],
+          ["Wobblers", "/swingers/wobblers/"],
+          ["Wobbly Battles", "/swingers/battles/"]
+        ]],
+        ["Apps", [
+          ["Music Practice", "/mini/musicpractice/"],
+          ["Games Chat", "/mini/chat/"],
+          ["Ear Trainer", "/mini/eartrainer/"],
+          ["MP3 Player", "/mini/mp3player/"],
+          ["Image Annotator", "/mini/imageannotator/"],
+          ["Meditation Timer", "/mini/meditation/"],
+          ["Stocks", "/mini/stocks/"],
+          ["Ai-Ching", "/mini/aiching/"],
+          ["Bookzam", "/mini/bookzam/"]
+        ]],
+        ["Libraries", [
+          ["Games page", "/"],
+          ["mini library", "/mini/"],
+          ["Charlie's library", "/charlie/"]
+        ]]
+      ];
+
+      const COUNTER = "https://hoai.goatcounter.com/counter/";
+
+      /** A path's total, or 0 for a page never counted (GoatCounter answers 404). */
+      async function count(path) {
+        try {
+          const res = await fetch(COUNTER + encodeURIComponent(path) + ".json", { cache: "no-store" });
+          if (!res.ok) return 0;
+          const body = await res.json();
+          return Number(String(body.count || "0").replace(/[^0-9]/g, "")) || 0;
+        } catch {
+          return null;
+        }
+      }
+
+      function cell(tag, text, cls) {
+        const el = document.createElement(tag);
+        el.textContent = text;
+        if (cls) el.className = cls;
+        return el;
+      }
+
+      async function render() {
+        const groups = document.getElementById("groups");
+        const all = await Promise.all(PAGES.map(([, pages]) => Promise.all(pages.map(([, path]) => count(path)))));
+        const max = Math.max(1, ...all.flat().filter((n) => n));
+        let listed = 0;
+        PAGES.forEach(([name, pages], g) => {
+          const rows = pages.map(([title, path], i) => ({ title, path, n: all[g][i] }))
+            .sort((a, b) => (b.n || 0) - (a.n || 0));
+          groups.append(cell("h2", name));
+          const table = document.createElement("table");
+          const head = document.createElement("tr");
+          head.append(cell("th", "Page"), cell("th", "Path", "path"), cell("th", "Visits", "n"));
+          table.append(head);
+          for (const row of rows) {
+            listed += row.n || 0;
+            const tr = document.createElement("tr");
+            if (!row.n) tr.className = "zero";
+            const title = cell("td", row.title);
+            if (row.n) {
+              const bar = document.createElement("div");
+              bar.className = "bar";
+              bar.style.width = Math.max(2, Math.round((row.n / max) * 100)) + "%";
+              title.append(bar);
+            }
+            const link = document.createElement("a");
+            link.href = "https://hoai.goatcounter.com/?filter=" + encodeURIComponent(row.path);
+            link.target = "_blank";
+            link.rel = "noopener";
+            link.textContent = row.path;
+            const path = document.createElement("td");
+            path.className = "path";
+            path.append(link);
+            tr.append(title, path, cell("td", row.n === null ? "?" : row.n.toLocaleString(), "n"));
+            table.append(tr);
+          }
+          groups.append(table);
+        });
+        const total = await count("TOTAL");
+        document.getElementById("totalAll").textContent = total === null ? "?" : total.toLocaleString();
+        document.getElementById("totalListed").textContent = listed.toLocaleString();
+      }
+
+      // Behind the invite door, and locked even while the owner's public-access
+      // switch is on, so it also needs a Google sign-in (see gate/gate.js).
+      openGate({
+        title: "Stats",
+        blurb: "Visitor numbers. Sign in to see them.",
+        game: "library-stats",
+        ignorePublicAccess: true
+      }).then(() => {
+        document.body.classList.remove("locked");
+        render();
+      });
+    </script>
+  </body>
+</html>
