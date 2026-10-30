@@ -280,8 +280,13 @@ async function followsPublicAccess(opts) {
 }
 
 /** Fire-and-forget. Carries an id, never a code, so it cannot be replayed in. */
-function pingSession(pass, game) {
-  const body = JSON.stringify({ kind: 'session', game, id: pass.id, name: pass.name, email: pass.google || '' });
+/**
+ * Log a visit. `withEmail` is set only by the pages that stay locked while
+ * public access is on, which require Google; everywhere else the visit is
+ * logged by name alone, even when the pass has a Google account.
+ */
+function pingSession(pass, game, withEmail = false) {
+  const body = JSON.stringify({ kind: 'session', game, id: pass.id, name: pass.name, email: withEmail ? (pass.google || '') : '' });
   try {
     const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
     if (navigator.sendBeacon(endpoint, blob)) return;
@@ -303,12 +308,9 @@ function pingSession(pass, game) {
 const GOATCOUNTER = 'https://hoai.goatcounter.com/count';
 const GOATCOUNTER_SCRIPT = 'https://gc.zgo.at/count.js';
 
-/** Games that load their own counter (into the same site) once they start. */
-const COUNTS_ITSELF = new Set(['battlebotarena', 'battlebotarena-stats']);
-
 let counting = false;
 function countVisit(game) {
-  if (counting || isLocal() || COUNTS_ITSELF.has(game)) return;
+  if (counting || isLocal()) return;
   counting = true;
   const add = () => {
     // A page that already counts itself is left to it.
@@ -627,7 +629,7 @@ export function openGate(opts) {
   // locked pages always know who is visiting. That page's own accessFile can
   // still make it follow the switch, which is checked below.
   if (pass && (!opts.ignorePublicAccess || (!pass.scope && (pass.google || !googleEnabled())))) {
-    pingSession(pass, opts.game);
+    pingSession(pass, opts.game, !!opts.ignorePublicAccess);
     stripGateParams(INVITE_PARAM, RESET_PARAM);
     return Promise.resolve();
   }
@@ -654,7 +656,7 @@ export function openGate(opts) {
       .then((isPublic) => {
         if (isPublic === 'held') {
           // This page follows the switch after all, so any pass opens it.
-          pingSession(held, opts.game);
+          pingSession(held, opts.game, false);
           stripGateParams(INVITE_PARAM, RESET_PARAM);
           resolve();
           return;
@@ -693,7 +695,7 @@ export function openGate(opts) {
         settled = true;
         cancelGoogle();
         writePass(p);
-        pingSession(p, opts.game);
+        pingSession(p, opts.game, locked);
         stripGateParams(INVITE_PARAM, RESET_PARAM);
         door.close();
         resolve();
